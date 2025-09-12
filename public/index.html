@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistema Contable Sky Home S.A.</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <!-- Pantalla de Login -->
+    <div id="loginScreen" class="login-container">
+        <div class="login-form">
+            <h1>Sistema Contable</h1>
+            <h2>Sky Home S.A.</h2>
+            <form id="loginForm">
+                <div class="form-group">
+                    <label for="username">Usuario:</label>
+                    <input type="text" id="username" name="username" required>
+                </div>
+                <div class="form-group">
+                    <label for="password">Contraseña:</label>
+                    <input type="password" id="password" name="password" required>
+                </div>
+                <button type="submit" class="btn">Iniciar Sesión</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Aplicación Principal -->
+    <div id="mainApp" class="container" style="display: none;">
+        <button class="logout-btn" onclick="logout()">Cerrar Sesión</button>
+        
+        <div class="header">
+            <h1>Sistema Contable - Sky Home S.A.</h1>
+            <div class="nav-buttons">
+                <button class="nav-btn active" onclick="showSection('movimientos')">Agregar Movimiento</button>
+                <button class="nav-btn" onclick="showSection('balance')">Balance General</button>
+                <button class="nav-btn" onclick="showSection('diario')">Libro Diario</button>
+                <button class="nav-btn" onclick="showSection('mayor')">Libro Mayor</button>
+                <button class="nav-btn" onclick="showSection('balanza')">Balanza de Comprobación</button>
+            </div>
+        </div>
+
+        <div class="content">
+            <!-- Sección Agregar Movimientos -->
+            <div id="movimientos" class="section active">
+                <h2>Agregar Movimiento Contable</h2>
+                <div class="alert" id="alert"></div>
+                
+                <form id="movimientoForm">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="fecha">Fecha:</label>
+                            <input type="date" id="fecha" name="fecha" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="concepto">Concepto:</label>
+                            <input type="text" id="concepto" name="concepto" required>
+                        </div>
+                    </div>
+
+                    <h3>Cuentas del Movimiento</h3>
+                    <div id="cuentasContainer">
+                        <div class="cuenta-row">
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label>Cuenta:</label>
+                                    <select class="cuenta-select" required>
+                                        <option value="">Seleccionar cuenta</option>
+                                        <option value="Caja">Caja</option>
+                                        <option value="Banco">Banco</option>
+                                        <option value="Inventario">Inventario</option>
+                                        <option value="Terreno">Terreno</option>
+                                        <option value="Edificio">Edificio</option>
+                                        <option value="Mobiliario">Mobiliario</option>
+                                        <option value="Equipo de computo">Equipo de cómputo</option>
+                                        <option value="Equipo de transporte">Equipo de transporte</option>
+                                        <option value="Papeleria y utiles">Papelería y útiles</option>
+                                        <option value="Rentas pag. x anticipado">Rentas pagadas por anticipado</option>
+                                        <option value="IVA acreditable">IVA acreditable</option>
+                                        <option value="IVA por acreditar">IVA por acreditar</option>
+                                        <option value="Cuentas por pagar">Cuentas por pagar</option>
+                                        <option value="Doc por pagar">Documentos por pagar</option>
+                                        <option value="Anticipo clientes">Anticipo de clientes</option>
+                                        <option value="IVA trasladado">IVA trasladado</option>
+                                        <option value="Capital">Capital social</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label>Debe:</label>
+                                    <input type="number" class="debe-input" step="0.01" min="0">
+                                </div>
+                                <div class="form-group">
+                                    <label>Haber:</label>
+                                    <input type="number" class="haber-input" step="0.01" min="0">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div style="margin: 20px 0;">
+                        <button type="button" class="btn" onclick="agregarCuenta()">+ Agregar Cuenta</button>
+                        <button type="button" class="btn" onclick="quitarCuenta()">- Quitar Cuenta</button>
+                    </div>
+                    
+                    <div class="form-row full">
+                        <button type="submit" class="btn">Registrar Movimiento</button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Sección Balance General -->
+            <div id="balance" class="section">
+                <div class="balance-header">
+                    <h2>Sky Home S.A.</h2>
+                    <h3>Balance General</h3>
+                    <p class="balance-date" id="balanceDate"></p>
+                </div>
+                
+                <table id="balanceTable">
+                    <thead>
+                        <tr>
+                            <th>Activo</th>
+                            <th>Importe</th>
+                            <th>Pasivo</th>
+                            <th>Importe</th>
+                            <th>Capital</th>
+                            <th>Importe</th>
+                        </tr>
+                    </thead>
+                    <tbody id="balanceBody">
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Sección Libro Diario -->
+            <div id="diario" class="section">
+                <div class="balance-header">
+                    <h2>Sky Home S.A.</h2>
+                    <h3>Libro Diario correspondiente al mes de agosto de 2025</h3>
+                </div>
+                <div id="diarioContent"></div>
+            </div>
+
+            <!-- Sección Libro Mayor -->
+            <div id="mayor" class="section">
+                <div class="balance-header">
+                    <h2>Sky Home S.A.</h2>
+                    <h3>Libro Mayor</h3>
+                </div>
+                <div id="mayorContent"></div>
+            </div>
+
+            <!-- Sección Balanza de Comprobación -->
+            <div id="balanza" class="section">
+                <div class="balance-header">
+                    <h2>Sky Home S.A.</h2>
+                    <h3>Balanza de Comprobación</h3>
+                    <p class="balance-date" id="balanzaDate"></p>
+                </div>
+                
+                <table id="balanzaTable">
+                    <thead>
+                        <tr>
+                            <th rowspan="2">CUENTAS</th>
+                            <th colspan="2">MOVIMIENTOS</th>
+                            <th colspan="2">SALDOS</th>
+                        </tr>
+                        <tr>
+                            <th>Deudor</th>
+                            <th>Acreedor</th>
+                            <th>Deudor</th>
+                            <th>Acreedor</th>
+                        </tr>
+                    </thead>
+                    <tbody id="balanzaBody">
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
