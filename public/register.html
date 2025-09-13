@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Registro - Sistema Contable</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body class="login-page">
+    <div class="login-container">
+        <div class="login-form register-form">
+            <div class="logo">
+                <h1>📝 Registro</h1>
+                <h2>Sistema Contable conta_bd</h2>
+            </div>
+            
+            <form id="registerForm">
+                <div class="alert" id="alert"></div>
+                
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="nombre">
+                            <span class="icon">👤</span>
+                            Nombre
+                        </label>
+                        <input type="text" id="nombre" name="nombre" required 
+                               placeholder="Tu nombre">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="apellidos">
+                            <span class="icon">👥</span>
+                            Apellidos
+                        </label>
+                        <input type="text" id="apellidos" name="apellidos" required 
+                               placeholder="Tus apellidos">
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="email">
+                        <span class="icon">📧</span>
+                        Email
+                    </label>
+                    <input type="email" id="email" name="email" required 
+                           placeholder="tu@email.com">
+                </div>
+                
+                <div class="form-group">
+                    <label for="username">
+                        <span class="icon">🔑</span>
+                        Usuario
+                    </label>
+                    <input type="text" id="username" name="username" required 
+                           placeholder="Elige un usuario único">
+                </div>
+                
+                <div class="form-group">
+                    <label for="password">
+                        <span class="icon">🔒</span>
+                        Contraseña
+                    </label>
+                    <input type="password" id="password" name="password" required 
+                           placeholder="Mínimo 6 caracteres">
+                </div>
+                
+                <div class="form-group">
+                    <label for="confirmPassword">
+                        <span class="icon">✅</span>
+                        Confirmar Contraseña
+                    </label>
+                    <input type="password" id="confirmPassword" name="confirmPassword" required 
+                           placeholder="Repite tu contraseña">
+                </div>
+                
+                <div class="form-group">
+                    <label for="rol">
+                        <span class="icon">👨‍💼</span>
+                        Rol
+                    </label>
+                    <select id="rol" name="rol">
+                        <option value="usuario">Usuario</option>
+                        <option value="contador">Contador</option>
+                    </select>
+                </div>
+                
+                <button type="submit" class="btn btn-primary">
+                    <span class="icon">📝</span>
+                    Registrarse
+                </button>
+            </form>
+            
+            <div class="form-footer">
+                <p>¿Ya tienes cuenta? <a href="/login">Inicia sesión aquí</a></p>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/register.js"></script>
+</body>
+</html>

@@ -1,334 +1,188 @@
-// server.js - Servidor principal con estructura MVC
 const express = require('express');
-const mysql = require('mysql2/promise');
 const cors = require('cors');
 const path = require('path');
 require('dotenv').config();
 
-// Importar modelos, controladores y rutas
-const MovimientoModel = require('./models/movimientoModel');
-const MovimientosController = require('./controllers/movimientosController');
-const createRoutes = require('./routes/movimientosRoutes');
+// Importar configuraciones y modelos
+const Database = require('./config/database');
+const AuthModel = require('./models/authModel');
+const ContabilidadModel = require('./models/contabilidadModel');
+
+// Importar controladores
+const AuthController = require('./controllers/authController');
+const ContabilidadController = require('./controllers/contabilidadController');
+
+// Importar middleware y rutas
+const AuthMiddleware = require('./middleware/auth');
+const createAuthRoutes = require('./routes/authRoutes');
+const createContabilidadRoutes = require('./routes/contabilidadRoutes');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Middleware
+// Variables globales
+let database;
+let authModel;
+let contabilidadModel;
+let authController;
+let contabilidadController;
+let authMiddleware;
+
+// Middleware básico
 app.use(cors());
-app.use(express.json());
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true }));
+
+// Servir archivos estáticos
 app.use(express.static('public'));
 
-// Configuración de la base de datos
-const dbConfig = {
-    host: process.env.DB_HOST || 'localhost',
-    user: process.env.DB_USER || 'root',
-    password: process.env.DB_PASSWORD || '',
-    database: process.env.DB_NAME || 'sistema_contable'
-};
-
-// Variables globales
-let db;
-let movimientoModel;
-let movimientosController;
-
-// Crear conexión a la base de datos e inicializar MVC
-async function conectarDB() {
+// Inicializar aplicación
+async function initializeApp() {
     try {
-        db = await mysql.createConnection(dbConfig);
-        console.log('Conectado a MySQL');
+        console.log('🚀 Iniciando Sistema Contable - conta_bd\n');
 
-        // Inicializar modelo
-        movimientoModel = new MovimientoModel(db);
-        
-        // Inicializar controlador
-        movimientosController = new MovimientosController(movimientoModel);
-        
+        // Conectar a la base de datos
+        database = new Database();
+        const db = await database.createDatabase();
+        console.log('✅ Base de datos conectada correctamente');
+
+        // Inicializar modelos
+        authModel = new AuthModel(db);
+        contabilidadModel = new ContabilidadModel(db);
+        console.log('✅ Modelos inicializados');
+
+        // Inicializar controladores
+        authController = new AuthController(authModel);
+        contabilidadController = new ContabilidadController(contabilidadModel);
+        console.log('✅ Controladores inicializados');
+
+        // Inicializar middleware
+        authMiddleware = new AuthMiddleware(authModel);
+        console.log('✅ Middleware inicializado');
+
         // Configurar rutas
-        const routes = createRoutes(movimientosController);
-        app.use('/api', routes);
+        const authRoutes = createAuthRoutes(authController, authMiddleware);
+        const contabilidadRoutes = createContabilidadRoutes(contabilidadController, authMiddleware);
 
-        // Inicializar base de datos
-        await inicializarBaseDatos();
-        
+        app.use('/api/auth', authRoutes);
+        app.use('/api', contabilidadRoutes);
+        console.log('✅ Rutas configuradas\n');
+
+        return true;
     } catch (error) {
-        console.error('Error conectando a MySQL:', error);
-        process.exit(1);
-    }
-}
-
-// Inicializar base de datos y datos por defecto
-async function inicializarBaseDatos() {
-    try {
-        console.log('Inicializando base de datos...');
-        
-        // Crear tablas
-        await movimientoModel.initializeTables();
-        console.log('Tablas creadas correctamente');
-
-        // Insertar usuarios por defecto
-        await movimientoModel.insertDefaultUsers();
-        console.log('Usuarios por defecto creados');
-
-        // Insertar catálogo de cuentas por defecto
-        await movimientoModel.insertDefaultCuentas();
-        console.log('Catálogo de cuentas creado');
-
-        // Insertar datos iniciales
-        await movimientoModel.insertInitialData();
-        console.log('Datos iniciales insertados');
-
-        console.log('Base de datos inicializada correctamente');
-    } catch (error) {
-        console.error('Error inicializando base de datos:', error);
+        console.error('❌ Error inicializando aplicación:', error);
         throw error;
     }
 }
 
-// Ruta para servir la aplicación
+// Rutas principales
 app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
+app.get('/login', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'login.html'));
+});
+
+app.get('/register', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'register.html'));
+});
+
+// Ruta de estado de la aplicación
+app.get('/api/status', (req, res) => {
+    res.json({
+        status: 'OK',
+        database: 'conta_bd',
+        timestamp: new Date().toISOString(),
+        version: '1.0.0'
+    });
+});
+
 // Middleware de manejo de errores
 app.use((err, req, res, next) => {
-    console.error(err.stack);
-    res.status(500).json({ error: 'Error interno del servidor' });
+    console.error('Error no manejado:', err);
+    res.status(500).json({ 
+        error: 'Error interno del servidor',
+        message: process.env.NODE_ENV === 'development' ? err.message : 'Ha ocurrido un error'
+    });
 });
 
 // Middleware para rutas no encontradas
 app.use('*', (req, res) => {
-    res.status(404).json({ error: 'Ruta no encontrada' });
+    if (req.path.startsWith('/api/')) {
+        res.status(404).json({ error: 'Endpoint no encontrado' });
+    } else {
+        res.status(404).sendFile(path.join(__dirname, 'public', '404.html'));
+    }
 });
 
-// Iniciar servidor
-async function iniciarServidor() {
+// Función para iniciar el servidor
+async function startServer() {
     try {
-        await conectarDB();
+        await initializeApp();
+        
         app.listen(PORT, () => {
-            console.log(`Servidor ejecutándose en puerto ${PORT}`);
-            console.log(`Aplicación disponible en: http://localhost:${PORT}`);
-            console.log('Estructura MVC inicializada correctamente');
-            console.log('\n=== USUARIOS POR DEFECTO ===');
-            console.log('admin / admin123');
-            console.log('contador / conta123');
-            console.log('===============================\n');
+            console.log('🌟 ===================================');
+            console.log(`🚀 Servidor ejecutándose en puerto ${PORT}`);
+            console.log(`🌐 Aplicación: http://localhost:${PORT}`);
+            console.log(`📊 Base de datos: conta_bd`);
+            console.log(`🔐 API: http://localhost:${PORT}/api`);
+            console.log('🌟 ===================================\n');
+            
+            console.log('📋 ENDPOINTS DISPONIBLES:');
+            console.log('🔐 Autenticación:');
+            console.log('   POST /api/auth/register - Registrar usuario');
+            console.log('   POST /api/auth/login - Iniciar sesión');
+            console.log('   POST /api/auth/logout - Cerrar sesión');
+            console.log('   GET  /api/auth/verify - Verificar token');
+            console.log('');
+            console.log('📊 Contabilidad:');
+            console.log('   GET  /api/cuentas - Obtener catálogo de cuentas');
+            console.log('   POST /api/cuentas - Crear cuenta');
+            console.log('   GET  /api/movimientos - Obtener movimientos');
+            console.log('   POST /api/movimientos - Crear movimiento');
+            console.log('   GET  /api/saldos - Obtener saldos');
+            console.log('   GET  /api/balanza-comprobacion - Balanza');
+            console.log('   GET  /api/balance-general - Balance General');
+            console.log('');
+            console.log('🎯 Para inicializar datos básicos ejecuta:');
+            console.log('   npm run init-db');
+            console.log('');
         });
     } catch (error) {
-        console.error('Error iniciando servidor:', error);
+        console.error('❌ Error iniciando servidor:', error);
         process.exit(1);
     }
 }
 
 // Manejo de cierre limpio
 process.on('SIGINT', async () => {
-    console.log('\nCerrando conexiones...');
-    if (db) {
-        await db.end();
+    console.log('\n🛑 Cerrando aplicación...');
+    if (database) {
+        await database.close();
     }
+    console.log('✅ Aplicación cerrada correctamente');
     process.exit(0);
 });
 
 process.on('SIGTERM', async () => {
-    console.log('\nCerrando conexiones...');
-    if (db) {
-        await db.end();
+    console.log('\n🛑 Cerrando aplicación...');
+    if (database) {
+        await database.close();
     }
+    console.log('✅ Aplicación cerrada correctamente');
     process.exit(0);
 });
 
-iniciarServidor();
-    try {
-        const [cuentas] = await db.execute(
-            'SELECT * FROM catalogo_cuentas WHERE activa = true ORDER BY codigo'
-        );
-        res.json(cuentas);
-    } catch (error) {
-        console.error('Error obteniendo cuentas:', error);
-        res.status(500).json({ error: 'Error obteniendo cuentas' });
-    }
+// Manejo de errores no capturados
+process.on('unhandledRejection', (reason, promise) => {
+    console.error('❌ Promesa rechazada no manejada:', reason);
 });
 
-// Ruta para obtener saldos de cuentas
-app.get('/api/saldos', authenticateToken, async (req, res) => {
-    try {
-        const [saldos] = await db.execute(`
-            SELECT cuenta,
-                   SUM(debe - haber) as saldo
-            FROM movimiento_cuentas mc
-            JOIN movimientos m ON mc.movimiento_id = m.id
-            GROUP BY cuenta
-            HAVING saldo != 0
-            ORDER BY cuenta
-        `);
-        
-        const saldosObj = {};
-        saldos.forEach(s => {
-            saldosObj[s.cuenta] = parseFloat(s.saldo);
-        });
-        
-        res.json(saldosObj);
-    } catch (error) {
-        console.error('Error obteniendo saldos:', error);
-        res.status(500).json({ error: 'Error obteniendo saldos' });
-    }
-});
-
-// Ruta para obtener movimientos totales por cuenta
-app.get('/api/movimientos-totales', authenticateToken, async (req, res) => {
-    try {
-        const [movimientos] = await db.execute(`
-            SELECT cuenta,
-                   SUM(debe) as total_debe,
-                   SUM(haber) as total_haber
-            FROM movimiento_cuentas mc
-            JOIN movimientos m ON mc.movimiento_id = m.id
-            GROUP BY cuenta
-            ORDER BY cuenta
-        `);
-        
-        const movimientosObj = {};
-        movimientos.forEach(m => {
-            movimientosObj[m.cuenta] = {
-                debe: parseFloat(m.total_debe),
-                haber: parseFloat(m.total_haber)
-            };
-        });
-        
-        res.json(movimientosObj);
-    } catch (error) {
-        console.error('Error obteniendo movimientos totales:', error);
-        res.status(500).json({ error: 'Error obteniendo movimientos totales' });
-    }
-});
-
-// Ruta para reportes
-app.get('/api/reportes/:tipo', authenticateToken, async (req, res) => {
-    try {
-        const { tipo } = req.params;
-        const { fechaInicio, fechaFin } = req.query;
-        
-        let whereClause = '';
-        let params = [];
-        
-        if (fechaInicio && fechaFin) {
-            whereClause = 'WHERE m.fecha BETWEEN ? AND ?';
-            params = [fechaInicio, fechaFin];
-        }
-        
-        switch (tipo) {
-            case 'balance':
-                // Balance General
-                const [saldosBalance] = await db.execute(`
-                    SELECT cuenta,
-                           SUM(debe - haber) as saldo,
-                           cc.tipo
-                    FROM movimiento_cuentas mc
-                    JOIN movimientos m ON mc.movimiento_id = m.id
-                    LEFT JOIN catalogo_cuentas cc ON mc.cuenta = cc.nombre
-                    ${whereClause}
-                    GROUP BY cuenta
-                    ORDER BY cc.tipo, cuenta
-                `, params);
-                
-                res.json(saldosBalance);
-                break;
-                
-            case 'diario':
-                // Libro Diario
-                const [movimientosDiario] = await db.execute(`
-                    SELECT m.*, mc.cuenta, mc.debe, mc.haber
-                    FROM movimientos m
-                    JOIN movimiento_cuentas mc ON m.id = mc.movimiento_id
-                    ${whereClause}
-                    ORDER BY m.fecha, m.id, mc.id
-                `, params);
-                
-                res.json(movimientosDiario);
-                break;
-                
-            case 'mayor':
-                // Libro Mayor
-                const [movimientosMayor] = await db.execute(`
-                    SELECT m.fecha, m.concepto, mc.cuenta, mc.debe, mc.haber,
-                           SUM(mc.debe - mc.haber) OVER (
-                               PARTITION BY mc.cuenta 
-                               ORDER BY m.fecha, m.id, mc.id 
-                               ROWS UNBOUNDED PRECEDING
-                           ) as saldo_acumulado
-                    FROM movimientos m
-                    JOIN movimiento_cuentas mc ON m.id = mc.movimiento_id
-                    ${whereClause}
-                    ORDER BY mc.cuenta, m.fecha, m.id
-                `, params);
-                
-                res.json(movimientosMayor);
-                break;
-                
-            case 'balanza':
-                // Balanza de Comprobación
-                const [balanza] = await db.execute(`
-                    SELECT cuenta,
-                           SUM(debe) as movimiento_debe,
-                           SUM(haber) as movimiento_haber,
-                           SUM(debe - haber) as saldo
-                    FROM movimiento_cuentas mc
-                    JOIN movimientos m ON mc.movimiento_id = m.id
-                    ${whereClause}
-                    GROUP BY cuenta
-                    ORDER BY cuenta
-                `, params);
-                
-                res.json(balanza);
-                break;
-                
-            default:
-                res.status(400).json({ error: 'Tipo de reporte no válido' });
-        }
-    } catch (error) {
-        console.error('Error generando reporte:', error);
-        res.status(500).json({ error: 'Error generando reporte' });
-    }
-});
-
-// Ruta para eliminar movimiento
-app.delete('/api/movimientos/:id', authenticateToken, async (req, res) => {
-    try {
-        const { id } = req.params;
-        
-        // Verificar que el movimiento existe
-        const [movimiento] = await db.execute('SELECT * FROM movimientos WHERE id = ?', [id]);
-        if (movimiento.length === 0) {
-            return res.status(404).json({ error: 'Movimiento no encontrado' });
-        }
-        
-        // Eliminar movimiento (las cuentas se eliminan por CASCADE)
-        await db.execute('DELETE FROM movimientos WHERE id = ?', [id]);
-        
-        res.json({ message: 'Movimiento eliminado correctamente' });
-    } catch (error) {
-        console.error('Error eliminando movimiento:', error);
-        res.status(500).json({ error: 'Error eliminando movimiento' });
-    }
-});
-
-// Ruta para servir la aplicación
-app.get('/', (req, res) => {
-    res.sendFile(path.join(__dirname, 'public', 'index.html'));
-});
-
-// Middleware de manejo de errores
-app.use((err, req, res, next) => {
-    console.error(err.stack);
-    res.status(500).json({ error: 'Error interno del servidor' });
+process.on('uncaughtException', (error) => {
+    console.error('❌ Excepción no capturada:', error);
+    process.exit(1);
 });
 
 // Iniciar servidor
-async function iniciarServidor() {
-    await conectarDB();
-    app.listen(PORT, () => {
-        console.log(`Servidor ejecutándose en puerto ${PORT}`);
-        console.log(`Aplicación disponible en: http://localhost:${PORT}`);
-    });
-}
-
-iniciarServidor();
+startServer();
