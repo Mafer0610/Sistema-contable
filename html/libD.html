@@ -1,0 +1,380 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Libro Diario</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+  <script defer src="../js/diario.js"></script>
+  <style>
+    body {
+      background: linear-gradient(135deg, #b19cd9 0%, #c2a5db 50%, #d4b3e0 100%);
+      min-height: 100vh;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+    .main-container {
+      background: rgba(255, 255, 255, 0.95);
+      border-radius: 20px;
+      margin: 30px auto;
+      padding: 40px;
+      max-width: 1200px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(255, 255, 255, 0.3);
+    }
+    .page-title {
+      color: #6b46a3;
+      font-weight: bold;
+      font-size: 2rem;
+      text-align: center;
+      margin-bottom: 30px;
+    }
+    .btn-back {
+      background: rgba(228, 165, 232, 0.8);
+      color: #6b46a3;
+      border: 2px solid #6b46a3;
+      border-radius: 10px;
+      padding: 10px 20px;
+      font-weight: 600;
+      transition: all 0.3s ease;
+      text-decoration: none;
+      display: inline-block;
+      margin-bottom: 20px;
+    }
+    .btn-back:hover {
+      background: #6b46a3;
+      color: white;
+      text-decoration: none;
+    }
+    .table-container {
+      background: rgba(255, 255, 255, 0.8);
+      border-radius: 15px;
+      overflow: hidden;
+      border: 2px solid #e4a5e8;
+      margin-top: 20px;
+    }
+    .table th {
+      background: #6b46a3;
+      color: white;
+      font-weight: 600;
+      padding: 15px;
+      border: none;
+    }
+    .table td {
+      padding: 15px;
+      border-bottom: 1px solid #e4a5e8;
+    }
+    .section-title {
+      color: #6b46a3;
+      font-weight: 600;
+      font-size: 1.5rem;
+      margin: 30px 0 20px 0;
+    }
+    .filter-section {
+      background: rgba(228, 165, 232, 0.2);
+      border-radius: 15px;
+      padding: 20px;
+      margin-bottom: 20px;
+    }
+    .btn-filter {
+      background: #6b46a3;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      padding: 8px 16px;
+      transition: all 0.3s ease;
+    }
+    .btn-filter:hover {
+      background: #5a3a8a;
+    }
+    .form-control {
+      border: 2px solid #e0e0e0;
+      border-radius: 10px;
+      padding: 8px 12px;
+      transition: all 0.3s ease;
+    }
+    .form-control:focus {
+      border-color: #6b46a3;
+      box-shadow: 0 0 0 0.2rem rgba(107, 70, 163, 0.25);
+    }
+    .total-section {
+      background: rgba(228, 165, 232, 0.3);
+      border-radius: 15px;
+      padding: 20px;
+      margin: 20px 0;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+    }
+    .total-item {
+      text-align: center;
+      padding: 15px;
+      background: rgba(255, 255, 255, 0.7);
+      border-radius: 10px;
+    }
+    .total-label {
+      color: #6b46a3;
+      font-weight: 600;
+      font-size: 1.1rem;
+    }
+    .total-value {
+      color: #333;
+      font-size: 1.8rem;
+      font-weight: bold;
+      margin-top: 5px;
+    }
+    .asiento-group {
+      background: rgba(107, 70, 163, 0.1);
+      border-left: 4px solid #6b46a3;
+      margin-bottom: 2px;
+    }
+    .asiento-number {
+      background: #6b46a3;
+      color: white;
+      padding: 8px 15px;
+      font-weight: 600;
+    }
+  </style>
+</head>
+<body>
+  <div class="main-container">
+    <a href="panel.html" class="btn-back">← Volver al Panel</a>
+    
+    <h1 class="page-title">Libro Diario</h1>
+
+    <!-- Filtros y búsqueda -->
+    <div class="filter-section">
+      <div class="row align-items-end">
+        <div class="col-md-3">
+          <label for="fechaInicio" class="form-label" style="color: #6b46a3; font-weight: 600;">Fecha Inicio:</label>
+          <input type="date" id="fechaInicio" class="form-control">
+        </div>
+        <div class="col-md-3">
+          <label for="fechaFin" class="form-label" style="color: #6b46a3; font-weight: 600;">Fecha Fin:</label>
+          <input type="date" id="fechaFin" class="form-control">
+        </div>
+        <div class="col-md-3">
+          <label for="buscarCuenta" class="form-label" style="color: #6b46a3; font-weight: 600;">Buscar Cuenta:</label>
+          <input type="text" id="buscarCuenta" class="form-control" placeholder="Nombre de cuenta">
+        </div>
+        <div class="col-md-3">
+          <button onclick="aplicarFiltros()" class="btn btn-filter me-2">Filtrar</button>
+          <button onclick="limpiarFiltros()" class="btn btn-filter" style="background: #8e7cc3;">Limpiar</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Totales -->
+    <div class="total-section">
+      <div class="total-item">
+        <div class="total-label">Total Cargos</div>
+        <div class="total-value" id="totalCargos">$0.00</div>
+      </div>
+      <div class="total-item">
+        <div class="total-label">Total Abonos</div>
+        <div class="total-value" id="totalAbonos">$0.00</div>
+      </div>
+    </div>
+
+    <h2 class="section-title">Registro Cronológico de Transacciones</h2>
+    <div class="table-container">
+      <div class="table-responsive">
+        <table class="table">
+          <thead>
+            <tr>
+              <th>Asiento</th>
+              <th>Fecha</th>
+              <th>Cuenta</th>
+              <th>Descripción</th>
+              <th>Debe (Cargo)</th>
+              <th>Haber (Abono)</th>
+            </tr>
+          </thead>
+          <tbody id="diarioTable"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Resumen por período -->
+    <div id="resumenPeriodo" style="display: none;">
+      <h2 class="section-title">Resumen del Período</h2>
+      <div class="table-container">
+        <table class="table">
+          <thead>
+            <tr>
+              <th>Cuenta</th>
+              <th>Total Debe</th>
+              <th>Total Haber</th>
+              <th>Diferencia</th>
+            </tr>
+          </thead>
+          <tbody id="resumenTable"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let movimientosFiltrados = [];
+    let todoMovimientos = [];
+
+    // Cargar libro diario al cargar la página
+    document.addEventListener('DOMContentLoaded', function() {
+      cargarLibroDiario();
+    });
+
+    function cargarLibroDiario() {
+      todoMovimientos = JSON.parse(localStorage.getItem('movimientos')) || [];
+      movimientosFiltrados = [...todoMovimientos];
+      mostrarMovimientos();
+      calcularTotales();
+    }
+
+    function mostrarMovimientos() {
+      const tbody = document.getElementById('diarioTable');
+      tbody.innerHTML = '';
+      
+      if (movimientosFiltrados.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="6" class="text-center">No hay movimientos registrados</td></tr>';
+        return;
+      }
+      
+      // Ordenar por fecha (más reciente primero)
+      const movimientosOrdenados = [...movimientosFiltrados].sort((a, b) => {
+        return new Date(b.fecha) - new Date(a.fecha);
+      });
+      
+      // Agrupar por fecha para crear asientos
+      const asientos = {};
+      movimientosOrdenados.forEach((mov, index) => {
+        const fechaKey = mov.fecha;
+        if (!asientos[fechaKey]) {
+          asientos[fechaKey] = [];
+        }
+        asientos[fechaKey].push(mov);
+      });
+      
+      let numeroAsiento = 1;
+      Object.keys(asientos).forEach(fecha => {
+        const movimientosFecha = asientos[fecha];
+        
+        movimientosFecha.forEach((mov, index) => {
+          const row = document.createElement('tr');
+          if (index === 0) {
+            row.classList.add('asiento-group');
+          }
+          
+          const cargo = parseFloat(mov.cargo) || 0;
+          const abono = parseFloat(mov.abono) || 0;
+          const descripcion = cargo > 0 ? `${mov.cuenta} (Debe)` : `${mov.cuenta} (Haber)`;
+          
+          row.innerHTML = `
+            <td>${index === 0 ? `<span class="asiento-number">Asiento ${numeroAsiento}</span>` : ''}</td>
+            <td>${mov.fecha}</td>
+            <td><strong>${mov.cuenta}</strong></td>
+            <td>${descripcion}</td>
+            <td>${cargo > 0 ? '$' + cargo.toFixed(2) : '-'}</td>
+            <td>${abono > 0 ? '$' + abono.toFixed(2) : '-'}</td>
+          `;
+          tbody.appendChild(row);
+        });
+        numeroAsiento++;
+      });
+    }
+
+    function calcularTotales() {
+      let totalCargos = 0;
+      let totalAbonos = 0;
+      
+      movimientosFiltrados.forEach(mov => {
+        totalCargos += parseFloat(mov.cargo) || 0;
+        totalAbonos += parseFloat(mov.abono) || 0;
+      });
+      
+      document.getElementById('totalCargos').textContent = `$${totalCargos.toFixed(2)}`;
+      document.getElementById('totalAbonos').textContent = `$${totalAbonos.toFixed(2)}`;
+    }
+
+    function aplicarFiltros() {
+      const fechaInicio = document.getElementById('fechaInicio').value;
+      const fechaFin = document.getElementById('fechaFin').value;
+      const buscarCuenta = document.getElementById('buscarCuenta').value.toLowerCase();
+      
+      movimientosFiltrados = todoMovimientos.filter(mov => {
+        let incluir = true;
+        
+        // Filtrar por fecha de inicio
+        if (fechaInicio && mov.fecha < fechaInicio) {
+          incluir = false;
+        }
+        
+        // Filtrar por fecha de fin
+        if (fechaFin && mov.fecha > fechaFin) {
+          incluir = false;
+        }
+        
+        // Filtrar por nombre de cuenta
+        if (buscarCuenta && !mov.cuenta.toLowerCase().includes(buscarCuenta)) {
+          incluir = false;
+        }
+        
+        return incluir;
+      });
+      
+      mostrarMovimientos();
+      calcularTotales();
+      generarResumenPeriodo();
+    }
+
+    function limpiarFiltros() {
+      document.getElementById('fechaInicio').value = '';
+      document.getElementById('fechaFin').value = '';
+      document.getElementById('buscarCuenta').value = '';
+      
+      movimientosFiltrados = [...todoMovimientos];
+      mostrarMovimientos();
+      calcularTotales();
+      
+      document.getElementById('resumenPeriodo').style.display = 'none';
+    }
+
+    function generarResumenPeriodo() {
+      if (movimientosFiltrados.length === 0) return;
+      
+      const cuentas = {};
+      
+      movimientosFiltrados.forEach(mov => {
+        if (!cuentas[mov.cuenta]) {
+          cuentas[mov.cuenta] = {
+            debe: 0,
+            haber: 0
+          };
+        }
+        
+        cuentas[mov.cuenta].debe += parseFloat(mov.cargo) || 0;
+        cuentas[mov.cuenta].haber += parseFloat(mov.abono) || 0;
+      });
+      
+      const tbody = document.getElementById('resumenTable');
+      tbody.innerHTML = '';
+      
+      Object.keys(cuentas).forEach(cuenta => {
+        const datos = cuentas[cuenta];
+        const diferencia = datos.debe - datos.haber;
+        
+        const row = document.createElement('tr');
+        row.innerHTML = `
+          <td><strong>${cuenta}</strong></td>
+          <td>$${datos.debe.toFixed(2)}</td>
+          <td>$${datos.haber.toFixed(2)}</td>
+          <td class="${diferencia >= 0 ? 'text-success' : 'text-danger'}">
+            $${diferencia.toFixed(2)}
+          </td>
+        `;
+        tbody.appendChild(row);
+      });
+      
+      document.getElementById('resumenPeriodo').style.display = 'block';
+    }
+  </script>
+</body>
+</html>

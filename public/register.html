@@ -4,98 +4,258 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Registro - Sistema Contable</title>
-    <link rel="stylesheet" href="styles.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .register-container {
+            background: white;
+            padding: 2rem;
+            border-radius: 15px;
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1);
+            width: 100%;
+            max-width: 500px;
+        }
+
+        .register-header {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+
+        .register-header h1 {
+            color: #333;
+            margin-bottom: 0.5rem;
+        }
+
+        .register-header p {
+            color: #666;
+            font-size: 0.9rem;
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+        }
+
+        .form-group {
+            margin-bottom: 1rem;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            color: #333;
+            font-weight: 500;
+        }
+
+        .form-group input, .form-group select {
+            width: 100%;
+            padding: 0.75rem;
+            border: 2px solid #e1e5e9;
+            border-radius: 8px;
+            font-size: 1rem;
+            transition: border-color 0.3s;
+        }
+
+        .form-group input:focus, .form-group select:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .btn {
+            width: 100%;
+            padding: 0.75rem;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.3);
+        }
+
+        .btn:active {
+            transform: translateY(0);
+        }
+
+        .alert {
+            padding: 0.75rem;
+            border-radius: 8px;
+            margin-bottom: 1rem;
+            font-size: 0.9rem;
+        }
+
+        .alert.error {
+            background-color: #fee;
+            color: #c53030;
+            border: 1px solid #fed7d7;
+        }
+
+        .alert.success {
+            background-color: #f0fff4;
+            color: #38a169;
+            border: 1px solid #c6f6d5;
+        }
+
+        .login-link {
+            text-align: center;
+            margin-top: 1rem;
+        }
+
+        .login-link a {
+            color: #667eea;
+            text-decoration: none;
+        }
+
+        .login-link a:hover {
+            text-decoration: underline;
+        }
+
+        @media (max-width: 600px) {
+            .form-row {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
 </head>
-<body class="login-page">
-    <div class="login-container">
-        <div class="login-form register-form">
-            <div class="logo">
-                <h1>📝 Registro</h1>
-                <h2>Sistema Contable conta_bd</h2>
+<body>
+    <div class="register-container">
+        <div class="register-header">
+            <h1>🏢 Sistema Contable</h1>
+            <p>Crea tu cuenta para acceder al sistema</p>
+        </div>
+
+        <form id="registerForm">
+            <div id="alertContainer" class="alert" style="display: none;"></div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="nombre">👤 Nombre:</label>
+                    <input type="text" id="nombre" name="nombre" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="apellidos">👥 Apellidos:</label>
+                    <input type="text" id="apellidos" name="apellidos" required>
+                </div>
             </div>
-            
-            <form id="registerForm">
-                <div class="alert" id="alert"></div>
-                
-                <div class="form-row">
-                    <div class="form-group">
-                        <label for="nombre">
-                            <span class="icon">👤</span>
-                            Nombre
-                        </label>
-                        <input type="text" id="nombre" name="nombre" required 
-                               placeholder="Tu nombre">
-                    </div>
-                    
-                    <div class="form-group">
-                        <label for="apellidos">
-                            <span class="icon">👥</span>
-                            Apellidos
-                        </label>
-                        <input type="text" id="apellidos" name="apellidos" required 
-                               placeholder="Tus apellidos">
-                    </div>
-                </div>
-                
+
+            <div class="form-group">
+                <label for="username">🔤 Usuario:</label>
+                <input type="text" id="username" name="username" required>
+            </div>
+
+            <div class="form-group">
+                <label for="email">📧 Email:</label>
+                <input type="email" id="email" name="email" required>
+            </div>
+
+            <div class="form-row">
                 <div class="form-group">
-                    <label for="email">
-                        <span class="icon">📧</span>
-                        Email
-                    </label>
-                    <input type="email" id="email" name="email" required 
-                           placeholder="tu@email.com">
+                    <label for="password">🔑 Contraseña:</label>
+                    <input type="password" id="password" name="password" required minlength="6">
                 </div>
-                
+
                 <div class="form-group">
-                    <label for="username">
-                        <span class="icon">🔑</span>
-                        Usuario
-                    </label>
-                    <input type="text" id="username" name="username" required 
-                           placeholder="Elige un usuario único">
-                </div>
-                
-                <div class="form-group">
-                    <label for="password">
-                        <span class="icon">🔒</span>
-                        Contraseña
-                    </label>
-                    <input type="password" id="password" name="password" required 
-                           placeholder="Mínimo 6 caracteres">
-                </div>
-                
-                <div class="form-group">
-                    <label for="confirmPassword">
-                        <span class="icon">✅</span>
-                        Confirmar Contraseña
-                    </label>
-                    <input type="password" id="confirmPassword" name="confirmPassword" required 
-                           placeholder="Repite tu contraseña">
-                </div>
-                
-                <div class="form-group">
-                    <label for="rol">
-                        <span class="icon">👨‍💼</span>
-                        Rol
-                    </label>
+                    <label for="rol">👨‍💼 Rol:</label>
                     <select id="rol" name="rol">
                         <option value="usuario">Usuario</option>
                         <option value="contador">Contador</option>
                     </select>
                 </div>
-                
-                <button type="submit" class="btn btn-primary">
-                    <span class="icon">📝</span>
-                    Registrarse
-                </button>
-            </form>
-            
-            <div class="form-footer">
-                <p>¿Ya tienes cuenta? <a href="/login">Inicia sesión aquí</a></p>
             </div>
+
+            <button type="submit" class="btn">✅ Registrarse</button>
+        </form>
+
+        <div class="login-link">
+            <p>¿Ya tienes cuenta? <a href="/login">Inicia sesión aquí</a></p>
         </div>
     </div>
 
-    <script src="js/register.js"></script>
+    <script>
+        const API_BASE = '/api';
+
+        document.getElementById('registerForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const formData = {
+                nombre: document.getElementById('nombre').value,
+                apellidos: document.getElementById('apellidos').value,
+                username: document.getElementById('username').value,
+                email: document.getElementById('email').value,
+                password: document.getElementById('password').value,
+                rol: document.getElementById('rol').value
+            };
+            
+            try {
+                const response = await fetch(`${API_BASE}/auth/register`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(formData)
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    showAlert('success', 'Usuario registrado exitosamente. Redirigiendo al login...');
+                    
+                    // Redireccionar después de 2 segundos
+                    setTimeout(() => {
+                        window.location.href = '/login';
+                    }, 2000);
+                } else {
+                    showAlert('error', data.error || 'Error en el registro');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                showAlert('error', 'Error de conexión con el servidor');
+            }
+        });
+
+        function showAlert(type, message) {
+            const alertContainer = document.getElementById('alertContainer');
+            alertContainer.className = `alert ${type}`;
+            alertContainer.textContent = message;
+            alertContainer.style.display = 'block';
+            
+            if (type === 'success') {
+                setTimeout(() => {
+                    alertContainer.style.display = 'none';
+                }, 5000);
+            }
+        }
+
+        // Verificar si ya está logueado
+        window.addEventListener('load', function() {
+            const token = localStorage.getItem('auth_token');
+            if (token) {
+                window.location.href = '/';
+            }
+        });
+    </script>
 </body>
 </html>

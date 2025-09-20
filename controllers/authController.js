@@ -1,11 +1,8 @@
-const jwt = require('jsonwebtoken');
-
 class AuthController {
     constructor(authModel) {
         this.authModel = authModel;
     }
 
-    // Registrar nuevo usuario
     async register(req, res) {
         try {
             const { username, password, nombre, apellidos, email, rol } = req.body;
@@ -17,19 +14,17 @@ class AuthController {
                 });
             }
 
-            if (password.length < 6) {
-                return res.status(400).json({ 
-                    error: 'La contraseña debe tener al menos 6 caracteres' 
+            // Verificar si el usuario ya existe
+            const existingUser = await this.authModel.findUserByUsername(username);
+            if (existingUser) {
+                return res.status(409).json({ 
+                    error: 'El nombre de usuario ya existe' 
                 });
             }
 
+            // Crear usuario
             const user = await this.authModel.createUser({
-                username,
-                password,
-                nombre,
-                apellidos,
-                email,
-                rol: rol || 'usuario'
+                username, password, nombre, apellidos, email, rol
             });
 
             res.status(201).json({
@@ -43,17 +38,17 @@ class AuthController {
                     rol: user.rol
                 }
             });
+
         } catch (error) {
             console.error('Error en registro:', error);
-            if (error.message === 'El usuario ya existe' || error.message === 'El email ya está registrado') {
-                res.status(409).json({ error: error.message });
+            if (error.code === 'ER_DUP_ENTRY') {
+                res.status(409).json({ error: 'El usuario o email ya existe' });
             } else {
                 res.status(500).json({ error: 'Error interno del servidor' });
             }
         }
     }
 
-    // Iniciar sesión
     async login(req, res) {
         try {
             const { username, password } = req.body;
@@ -64,38 +59,30 @@ class AuthController {
                 });
             }
 
+            // Buscar usuario
             const user = await this.authModel.findUserByUsername(username);
             if (!user) {
-                return res.status(401).json({ error: 'Credenciales inválidas' });
+                return res.status(401).json({ 
+                    error: 'Credenciales inválidas' 
+                });
             }
 
-            const validPassword = await this.authModel.validatePassword(password, user.password);
-            if (!validPassword) {
-                return res.status(401).json({ error: 'Credenciales inválidas' });
+            // Validar contraseña
+            const isValidPassword = await this.authModel.validatePassword(password, user.password);
+            if (!isValidPassword) {
+                return res.status(401).json({ 
+                    error: 'Credenciales inválidas' 
+                });
             }
 
-            // Generar token JWT
-            const token = jwt.sign(
-                { 
-                    id: user.id, 
-                    username: user.username, 
-                    rol: user.rol 
-                },
-                process.env.JWT_SECRET || 'secret_key',
-                { expiresIn: '24h' }
-            );
+            // Generar token
+            const token = this.authModel.generateToken(user);
 
-            // Calcular fecha de expiración
-            const expiresAt = new Date();
-            expiresAt.setHours(expiresAt.getHours() + 24);
-
-            // Guardar sesión en la base de datos
-            await this.authModel.saveSession(user.id, token, expiresAt);
-
-            // Limpiar sesiones expiradas
-            await this.authModel.cleanExpiredSessions();
+            // Guardar sesión
+            await this.authModel.saveSession(user.id, token);
 
             res.json({
+                message: 'Login exitoso',
                 token,
                 user: {
                     id: user.id,
@@ -106,35 +93,38 @@ class AuthController {
                     rol: user.rol
                 }
             });
+
         } catch (error) {
             console.error('Error en login:', error);
             res.status(500).json({ error: 'Error interno del servidor' });
         }
     }
 
-    // Cerrar sesión
     async logout(req, res) {
         try {
-            const token = req.headers.authorization?.split(' ')[1];
-            if (token) {
-                await this.authModel.closeSession(token);
+            const token = req.headers.authorization?.replace('Bearer ', '');
+            if (token && req.user) {
+                await this.authModel.deleteSession(req.user.id, token);
             }
-            res.json({ message: 'Sesión cerrada exitosamente' });
+
+            res.json({ message: 'Logout exitoso' });
         } catch (error) {
             console.error('Error en logout:', error);
-            res.status(500).json({ error: 'Error cerrando sesión' });
+            res.status(500).json({ error: 'Error interno del servidor' });
         }
     }
 
-    // Verificar token
-    async verifyToken(req, res) {
+    async verify(req, res) {
         try {
+            // El middleware de autenticación ya validó el token
             const user = await this.authModel.findUserById(req.user.id);
+            
             if (!user) {
                 return res.status(401).json({ error: 'Usuario no encontrado' });
             }
 
             res.json({
+                valid: true,
                 user: {
                     id: user.id,
                     username: user.username,
@@ -146,17 +136,12 @@ class AuthController {
             });
         } catch (error) {
             console.error('Error verificando token:', error);
-            res.status(500).json({ error: 'Error verificando token' });
+            res.status(401).json({ error: 'Token inválido' });
         }
     }
 
-    // Obtener todos los usuarios (solo admin)
-    async getAllUsers(req, res) {
+    async getUsers(req, res) {
         try {
-            if (req.user.rol !== 'admin') {
-                return res.status(403).json({ error: 'Acceso denegado' });
-            }
-
             const users = await this.authModel.getAllUsers();
             res.json(users);
         } catch (error) {
@@ -165,87 +150,14 @@ class AuthController {
         }
     }
 
-    // Actualizar usuario
-    async updateUser(req, res) {
+    async toggleUser(req, res) {
         try {
             const { id } = req.params;
-            const { nombre, apellidos, email, rol, activo } = req.body;
-
-            // Solo admin puede actualizar otros usuarios o cambiar roles
-            if (req.user.rol !== 'admin' && (req.user.id != id || rol)) {
-                return res.status(403).json({ error: 'Acceso denegado' });
-            }
-
-            const updatedUser = await this.authModel.updateUser(id, {
-                nombre,
-                apellidos,
-                email,
-                rol: req.user.rol === 'admin' ? rol : undefined,
-                activo: req.user.rol === 'admin' ? activo : undefined
-            });
-
-            res.json({
-                message: 'Usuario actualizado exitosamente',
-                user: updatedUser
-            });
+            const result = await this.authModel.toggleUserStatus(id);
+            res.json(result);
         } catch (error) {
-            console.error('Error actualizando usuario:', error);
-            res.status(500).json({ error: 'Error actualizando usuario' });
-        }
-    }
-
-    // Cambiar contraseña
-    async changePassword(req, res) {
-        try {
-            const { currentPassword, newPassword } = req.body;
-            const userId = req.user.id;
-
-            if (!currentPassword || !newPassword) {
-                return res.status(400).json({ 
-                    error: 'Contraseña actual y nueva son obligatorias' 
-                });
-            }
-
-            if (newPassword.length < 6) {
-                return res.status(400).json({ 
-                    error: 'La nueva contraseña debe tener al menos 6 caracteres' 
-                });
-            }
-
-            // Verificar contraseña actual
-            const user = await this.authModel.findUserByUsername(req.user.username);
-            const validPassword = await this.authModel.validatePassword(currentPassword, user.password);
-            
-            if (!validPassword) {
-                return res.status(401).json({ error: 'Contraseña actual incorrecta' });
-            }
-
-            await this.authModel.changePassword(userId, newPassword);
-            res.json({ message: 'Contraseña cambiada exitosamente' });
-        } catch (error) {
-            console.error('Error cambiando contraseña:', error);
-            res.status(500).json({ error: 'Error cambiando contraseña' });
-        }
-    }
-
-    // Eliminar usuario (solo admin)
-    async deleteUser(req, res) {
-        try {
-            const { id } = req.params;
-
-            if (req.user.rol !== 'admin') {
-                return res.status(403).json({ error: 'Acceso denegado' });
-            }
-
-            if (req.user.id == id) {
-                return res.status(400).json({ error: 'No puedes eliminar tu propio usuario' });
-            }
-
-            await this.authModel.deleteUser(id);
-            res.json({ message: 'Usuario eliminado exitosamente' });
-        } catch (error) {
-            console.error('Error eliminando usuario:', error);
-            res.status(500).json({ error: 'Error eliminando usuario' });
+            console.error('Error cambiando estado del usuario:', error);
+            res.status(500).json({ error: 'Error cambiando estado del usuario' });
         }
     }
 }

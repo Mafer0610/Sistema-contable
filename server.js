@@ -44,7 +44,14 @@ async function initializeApp() {
         // Conectar a la base de datos
         database = new Database();
         const db = await database.createDatabase();
-        console.log('✅ Base de datos conectada correctamente');
+        console.log('✅ Base de datos "conta_bd" conectada correctamente');
+
+        // ¡IMPORTANTE! Crear todas las tablas
+        await database.initializeTables();
+        console.log('✅ Tablas inicializadas correctamente');
+
+        // Crear usuario administrador por defecto si no existe
+        await createDefaultAdmin(db);
 
         // Inicializar modelos
         authModel = new AuthModel(db);
@@ -72,6 +79,135 @@ async function initializeApp() {
     } catch (error) {
         console.error('❌ Error inicializando aplicación:', error);
         throw error;
+    }
+}
+
+// Crear usuario administrador por defecto
+async function createDefaultAdmin(db) {
+    try {
+        const [existingAdmin] = await db.execute(
+            'SELECT COUNT(*) as count FROM usuarios WHERE rol = "admin"'
+        );
+        
+        if (existingAdmin[0].count === 0) {
+            const bcrypt = require('bcrypt');
+            const hashedPassword = await bcrypt.hash('admin123', 10);
+            
+            await db.execute(
+                'INSERT INTO usuarios (username, password, nombre, apellidos, email, rol) VALUES (?, ?, ?, ?, ?, ?)',
+                ['admin', hashedPassword, 'Administrador', 'Sistema', 'admin@conta.com', 'admin']
+            );
+            
+            console.log('✅ Usuario administrador creado:');
+            console.log('   👤 Usuario: admin');
+            console.log('   🔑 Contraseña: admin123');
+            console.log('   📧 Email: admin@conta.com\n');
+        }
+
+        // Crear empresa por defecto
+        const [existingCompany] = await db.execute(
+            'SELECT COUNT(*) as count FROM empresas'
+        );
+        
+        if (existingCompany[0].count === 0) {
+            await db.execute(
+                'INSERT INTO empresas (nombre, rfc, direccion, telefono, email) VALUES (?, ?, ?, ?, ?)',
+                ['Sky Home S.A. de C.V.', 'SHO123456789', 'Tuxtla Gutiérrez, Chiapas', '961-123-4567', 'info@skyhome.com']
+            );
+            console.log('✅ Empresa por defecto creada: Sky Home S.A. de C.V.\n');
+        }
+
+        // Crear catálogo de cuentas básico
+        await createBasicChartOfAccounts(db);
+
+    } catch (error) {
+        console.error('❌ Error creando datos por defecto:', error);
+    }
+}
+
+// Crear catálogo de cuentas básico
+async function createBasicChartOfAccounts(db) {
+    try {
+        const [existingAccounts] = await db.execute(
+            'SELECT COUNT(*) as count FROM catalogo_cuentas'
+        );
+        
+        if (existingAccounts[0].count === 0) {
+            const cuentasBasicas = [
+                // ACTIVOS
+                { codigo: '1000', nombre: 'ACTIVO', tipo: 'Activo', naturaleza: 'Deudora', nivel: 1 },
+                { codigo: '1100', nombre: 'ACTIVO CIRCULANTE', tipo: 'Activo', naturaleza: 'Deudora', nivel: 2 },
+                { codigo: '1101', nombre: 'Caja', tipo: 'Activo', subtipo: 'Circulante', naturaleza: 'Deudora', nivel: 3 },
+                { codigo: '1102', nombre: 'Bancos', tipo: 'Activo', subtipo: 'Circulante', naturaleza: 'Deudora', nivel: 3 },
+                { codigo: '1103', nombre: 'Clientes', tipo: 'Activo', subtipo: 'Circulante', naturaleza: 'Deudora', nivel: 3 },
+                { codigo: '1104', nombre: 'Inventarios', tipo: 'Activo', subtipo: 'Circulante', naturaleza: 'Deudora', nivel: 3 },
+                { codigo: '1105', nombre: 'IVA Acreditable', tipo: 'Activo', subtipo: 'Circulante', naturaleza: 'Deudora', nivel: 3 },
+                
+                { codigo: '1200', nombre: 'ACTIVO FIJO', tipo: 'Activo', naturaleza: 'Deudora', nivel: 2 },
+                { codigo: '1201', nombre: 'Terrenos', tipo: 'Activo', subtipo: 'Fijo', naturaleza: 'Deudora', nivel: 3 },
+                { codigo: '1202', nombre: 'Edificios', tipo: 'Activo', subtipo: 'Fijo', naturaleza: 'Deudora', nivel: 3 },
+                { codigo: '1203', nombre: 'Mobiliario y Equipo', tipo: 'Activo', subtipo: 'Fijo', naturaleza: 'Deudora', nivel: 3 },
+                { codigo: '1204', nombre: 'Equipo de Transporte', tipo: 'Activo', subtipo: 'Fijo', naturaleza: 'Deudora', nivel: 3 },
+                { codigo: '1205', nombre: 'Depreciación Acumulada', tipo: 'Activo', subtipo: 'Fijo', naturaleza: 'Acreedora', nivel: 3 },
+                
+                // PASIVOS
+                { codigo: '2000', nombre: 'PASIVO', tipo: 'Pasivo', naturaleza: 'Acreedora', nivel: 1 },
+                { codigo: '2100', nombre: 'PASIVO CORTO PLAZO', tipo: 'Pasivo', naturaleza: 'Acreedora', nivel: 2 },
+                { codigo: '2101', nombre: 'Proveedores', tipo: 'Pasivo', subtipo: 'Corto Plazo', naturaleza: 'Acreedora', nivel: 3 },
+                { codigo: '2102', nombre: 'Acreedores Diversos', tipo: 'Pasivo', subtipo: 'Corto Plazo', naturaleza: 'Acreedora', nivel: 3 },
+                { codigo: '2103', nombre: 'IVA por Pagar', tipo: 'Pasivo', subtipo: 'Corto Plazo', naturaleza: 'Acreedora', nivel: 3 },
+                { codigo: '2104', nombre: 'ISR por Pagar', tipo: 'Pasivo', subtipo: 'Corto Plazo', naturaleza: 'Acreedora', nivel: 3 },
+                { codigo: '2105', nombre: 'Sueldos por Pagar', tipo: 'Pasivo', subtipo: 'Corto Plazo', naturaleza: 'Acreedora', nivel: 3 },
+                
+                { codigo: '2200', nombre: 'PASIVO LARGO PLAZO', tipo: 'Pasivo', naturaleza: 'Acreedora', nivel: 2 },
+                { codigo: '2201', nombre: 'Préstamos Bancarios LP', tipo: 'Pasivo', subtipo: 'Largo Plazo', naturaleza: 'Acreedora', nivel: 3 },
+                { codigo: '2202', nombre: 'Hipotecas por Pagar', tipo: 'Pasivo', subtipo: 'Largo Plazo', naturaleza: 'Acreedora', nivel: 3 },
+                
+                // CAPITAL
+                { codigo: '3000', nombre: 'CAPITAL', tipo: 'Capital', naturaleza: 'Acreedora', nivel: 1 },
+                { codigo: '3100', nombre: 'CAPITAL CONTABLE', tipo: 'Capital', naturaleza: 'Acreedora', nivel: 2 },
+                { codigo: '3101', nombre: 'Capital Social', tipo: 'Capital', naturaleza: 'Acreedora', nivel: 3 },
+                { codigo: '3102', nombre: 'Reservas', tipo: 'Capital', naturaleza: 'Acreedora', nivel: 3 },
+                { codigo: '3103', nombre: 'Utilidades Retenidas', tipo: 'Capital', naturaleza: 'Acreedora', nivel: 3 },
+                { codigo: '3104', nombre: 'Utilidad del Ejercicio', tipo: 'Capital', naturaleza: 'Acreedora', nivel: 3 },
+                
+                // INGRESOS
+                { codigo: '4000', nombre: 'INGRESOS', tipo: 'Ingreso', naturaleza: 'Acreedora', nivel: 1 },
+                { codigo: '4100', nombre: 'INGRESOS OPERACIONALES', tipo: 'Ingreso', naturaleza: 'Acreedora', nivel: 2 },
+                { codigo: '4101', nombre: 'Ventas', tipo: 'Ingreso', naturaleza: 'Acreedora', nivel: 3 },
+                { codigo: '4102', nombre: 'Servicios', tipo: 'Ingreso', naturaleza: 'Acreedora', nivel: 3 },
+                { codigo: '4103', nombre: 'Otros Ingresos', tipo: 'Ingreso', naturaleza: 'Acreedora', nivel: 3 },
+                
+                // EGRESOS
+                { codigo: '5000', nombre: 'EGRESOS', tipo: 'Egreso', naturaleza: 'Deudora', nivel: 1 },
+                { codigo: '5100', nombre: 'COSTOS DE VENTA', tipo: 'Egreso', naturaleza: 'Deudora', nivel: 2 },
+                { codigo: '5101', nombre: 'Compras', tipo: 'Egreso', subtipo: 'Costo', naturaleza: 'Deudora', nivel: 3 },
+                { codigo: '5102', nombre: 'Costo de Ventas', tipo: 'Egreso', subtipo: 'Costo', naturaleza: 'Deudora', nivel: 3 },
+                
+                { codigo: '5200', nombre: 'GASTOS OPERATIVOS', tipo: 'Egreso', naturaleza: 'Deudora', nivel: 2 },
+                { codigo: '5201', nombre: 'Gastos de Administración', tipo: 'Egreso', subtipo: 'Operativo', naturaleza: 'Deudora', nivel: 3 },
+                { codigo: '5202', nombre: 'Gastos de Ventas', tipo: 'Egreso', subtipo: 'Operativo', naturaleza: 'Deudora', nivel: 3 },
+                { codigo: '5203', nombre: 'Sueldos y Salarios', tipo: 'Egreso', subtipo: 'Operativo', naturaleza: 'Deudora', nivel: 3 },
+                { codigo: '5204', nombre: 'Renta', tipo: 'Egreso', subtipo: 'Operativo', naturaleza: 'Deudora', nivel: 3 },
+                { codigo: '5205', nombre: 'Servicios Públicos', tipo: 'Egreso', subtipo: 'Operativo', naturaleza: 'Deudora', nivel: 3 },
+                { codigo: '5206', nombre: 'Depreciaciones', tipo: 'Egreso', subtipo: 'Operativo', naturaleza: 'Deudora', nivel: 3 },
+                
+                { codigo: '5300', nombre: 'GASTOS FINANCIEROS', tipo: 'Egreso', naturaleza: 'Deudora', nivel: 2 },
+                { codigo: '5301', nombre: 'Intereses Pagados', tipo: 'Egreso', subtipo: 'Financiero', naturaleza: 'Deudora', nivel: 3 },
+                { codigo: '5302', nombre: 'Comisiones Bancarias', tipo: 'Egreso', subtipo: 'Financiero', naturaleza: 'Deudora', nivel: 3 }
+            ];
+
+            for (const cuenta of cuentasBasicas) {
+                await db.execute(
+                    'INSERT INTO catalogo_cuentas (codigo, nombre, tipo, subtipo, naturaleza, nivel) VALUES (?, ?, ?, ?, ?, ?)',
+                    [cuenta.codigo, cuenta.nombre, cuenta.tipo, cuenta.subtipo || null, cuenta.naturaleza, cuenta.nivel]
+                );
+            }
+            
+            console.log(`✅ Catálogo de cuentas básico creado (${cuentasBasicas.length} cuentas)\n`);
+        }
+    } catch (error) {
+        console.error('❌ Error creando catálogo de cuentas:', error);
     }
 }
 
@@ -145,8 +281,9 @@ async function startServer() {
             console.log('   GET  /api/balanza-comprobacion - Balanza');
             console.log('   GET  /api/balance-general - Balance General');
             console.log('');
-            console.log('🎯 Para inicializar datos básicos ejecuta:');
-            console.log('   npm run init-db');
+            console.log('🎯 Credenciales de prueba:');
+            console.log('   👤 Usuario: admin');
+            console.log('   🔑 Contraseña: admin123');
             console.log('');
         });
     } catch (error) {

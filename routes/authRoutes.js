@@ -8,13 +8,11 @@ function createAuthRoutes(authController, authMiddleware) {
 
     // Rutas protegidas
     router.post('/logout', authMiddleware.requireAuth(), (req, res) => authController.logout(req, res));
-    router.get('/verify', authMiddleware.requireAuth(), (req, res) => authController.verifyToken(req, res));
-    router.put('/change-password', authMiddleware.requireAuth(), (req, res) => authController.changePassword(req, res));
-
-    // Rutas solo para admin
-    router.get('/users', authMiddleware.requireAdmin(), (req, res) => authController.getAllUsers(req, res));
-    router.put('/users/:id', authMiddleware.requireAuth(), (req, res) => authController.updateUser(req, res));
-    router.delete('/users/:id', authMiddleware.requireAdmin(), (req, res) => authController.deleteUser(req, res));
+    router.get('/verify', authMiddleware.requireAuth(), (req, res) => authController.verify(req, res));
+    
+    // Rutas de administración de usuarios
+    router.get('/usuarios', authMiddleware.requireAdmin(), (req, res) => authController.getUsers(req, res));
+    router.put('/usuarios/:id/toggle', authMiddleware.requireAdmin(), (req, res) => authController.toggleUser(req, res));
 
     return router;
 }

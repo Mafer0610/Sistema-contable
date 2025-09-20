@@ -776,10 +776,126 @@ async function generarLibroMayor() {
     }
 }
 
+// Cargar usuarios (solo para administradores)
+async function cargarUsuarios() {
+    if (currentUser.rol !== 'admin') return;
+    
+    try {
+        const response = await fetch(`${API_BASE}/auth/usuarios`, {
+            headers: getAuthHeaders()
+        });
+        
+        if (!response.ok) throw new Error('Error cargando usuarios');
+        
+        const usuarios = await response.json();
+        const tbody = document.getElementById('usuariosBody');
+        tbody.innerHTML = '';
+        
+        usuarios.forEach(usuario => {
+            const row = tbody.insertRow();
+            row.insertCell(0).textContent = usuario.username;
+            row.insertCell(1).textContent = `${usuario.nombre} ${usuario.apellidos}`;
+            row.insertCell(2).textContent = usuario.email;
+            row.insertCell(3).textContent = usuario.rol;
+            row.insertCell(4).innerHTML = usuario.activo ? 
+                '<span class="status active">✅ Activo</span>' : 
+                '<span class="status inactive">❌ Inactivo</span>';
+            row.insertCell(5).textContent = formatDate(usuario.created_at);
+            
+            const actionsCell = row.insertCell(6);
+            actionsCell.innerHTML = `
+                <button class="btn btn-sm btn-warning" onclick="editarUsuario(${usuario.id})">✏️</button>
+                <button class="btn btn-sm ${usuario.activo ? 'btn-danger' : 'btn-success'}" 
+                        onclick="toggleUsuario(${usuario.id}, ${usuario.activo})">
+                    ${usuario.activo ? '🚫' : '✅'}
+                </button>
+            `;
+        });
+        
+    } catch (error) {
+        console.error('Error cargando usuarios:', error);
+        mostrarAlerta('usuariosAlert', 'error', 'Error cargando usuarios');
+    }
+}
+
+// Funciones de gestión de usuarios
+async function editarUsuario(id) {
+    // Implementar modal de edición de usuario
+    console.log('Editar usuario:', id);
+    mostrarAlerta('usuariosAlert', 'info', 'Función de edición en desarrollo');
+}
+
+async function toggleUsuario(id, activo) {
+    const accion = activo ? 'desactivar' : 'activar';
+    
+    if (!confirm(`¿Estás seguro de que deseas ${accion} este usuario?`)) return;
+    
+    try {
+        const response = await fetch(`${API_BASE}/auth/usuarios/${id}/toggle`, {
+            method: 'PUT',
+            headers: getAuthHeaders()
+        });
+        
+        if (response.ok) {
+            mostrarAlerta('usuariosAlert', 'success', `Usuario ${accion}do correctamente`);
+            cargarUsuarios();
+        } else {
+            throw new Error('Error al cambiar estado del usuario');
+        }
+    } catch (error) {
+        console.error('Error toggleando usuario:', error);
+        mostrarAlerta('usuariosAlert', 'error', 'Error al cambiar estado del usuario');
+    }
+}
+
+// Funciones de gestión de cuentas
+async function editarCuenta(id) {
+    // Implementar modal de edición de cuenta
+    console.log('Editar cuenta:', id);
+    mostrarAlerta('cuentasAlert', 'info', 'Función de edición en desarrollo');
+}
+
+async function eliminarCuenta(id) {
+    if (!confirm('¿Estás seguro de que deseas eliminar esta cuenta?')) return;
+    
+    try {
+        const response = await fetch(`${API_BASE}/cuentas/${id}`, {
+            method: 'DELETE',
+            headers: getAuthHeaders()
+        });
+        
+        if (response.ok) {
+            mostrarAlerta('cuentasAlert', 'success', 'Cuenta eliminada correctamente');
+            cargarCuentas();
+        } else {
+            const data = await response.json();
+            mostrarAlerta('cuentasAlert', 'error', data.error || 'Error eliminando cuenta');
+        }
+    } catch (error) {
+        console.error('Error eliminando cuenta:', error);
+        mostrarAlerta('cuentasAlert', 'error', 'Error de conexión con el servidor');
+    }
+}
+
 // Funciones auxiliares
 function mostrarAlerta(containerId, tipo, mensaje) {
-    const alertContainer = typeof containerId === 'string' ? document.getElementById(containerId) : document.getElementById('alert');
-    if (!alertContainer) return;
+    let alertContainer;
+    
+    if (typeof containerId === 'string') {
+        alertContainer = document.getElementById(containerId);
+    } else {
+        alertContainer = document.getElementById('alert');
+    }
+    
+    if (!alertContainer) {
+        // Crear alerta temporal en la parte superior
+        alertContainer = document.createElement('div');
+        alertContainer.style.position = 'fixed';
+        alertContainer.style.top = '20px';
+        alertContainer.style.right = '20px';
+        alertContainer.style.zIndex = '9999';
+        document.body.appendChild(alertContainer);
+    }
     
     alertContainer.className = `alert ${tipo}`;
     alertContainer.textContent = mensaje;
@@ -787,6 +903,10 @@ function mostrarAlerta(containerId, tipo, mensaje) {
     
     setTimeout(() => {
         alertContainer.style.display = 'none';
+        // Remover alerta temporal si se creó
+        if (!containerId || typeof containerId !== 'string') {
+            document.body.removeChild(alertContainer);
+        }
     }, 5000);
 }
 
@@ -821,277 +941,151 @@ function actualizarFechas() {
     
     if (balanceDate) balanceDate.textContent = `al ${fechaTexto}`;
     if (balanzaDate) balanzaDate.textContent = `al ${fechaTexto}`;
-}getElementById('fecha');
-    if (fechaInput) {
-        fechaInput.valueAsDate = new Date();
+}
+
+// Funciones de validación
+function validarEmail(email) {
+    const regex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return regex.test(email);
+}
+
+function validarCodigo(codigo) {
+    return codigo && codigo.length >= 3 && /^[0-9]+$/.test(codigo);
+}
+
+// Función para imprimir reportes
+function imprimirReporte(seccion) {
+    const contenido = document.getElementById(seccion);
+    if (!contenido) return;
+    
+    const ventanaImpresion = window.open('', '_blank');
+    ventanaImpresion.document.write(`
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <title>Sky Home S.A. de C.V. - Reporte</title>
+            <style>
+                body { font-family: Arial, sans-serif; margin: 20px; }
+                table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
+                th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+                th { background-color: #f5f5f5; font-weight: bold; }
+                .money { text-align: right; }
+                .total-row { font-weight: bold; background-color: #f0f0f0; }
+                .balance-header { text-align: center; margin-bottom: 20px; }
+                .diario-entry { margin-bottom: 20px; border-bottom: 1px solid #ddd; }
+                .mayor-cuenta { margin-bottom: 30px; }
+                .mayor-header { font-weight: bold; margin-bottom: 10px; }
+                @media print {
+                    body { margin: 0; }
+                    .no-print { display: none; }
+                }
+            </style>
+        </head>
+        <body>
+            ${contenido.innerHTML}
+            <script>window.onload = function() { window.print(); }</script>
+        </body>
+        </html>
+    `);
+    ventanaImpresion.document.close();
+}
+
+// Función para exportar a Excel (básico)
+function exportarExcel(seccion, nombre) {
+    const tabla = document.querySelector(`#${seccion} table`);
+    if (!tabla) return;
+    
+    let csv = '';
+    const filas = tabla.querySelectorAll('tr');
+    
+    filas.forEach(fila => {
+        const celdas = fila.querySelectorAll('th, td');
+        const filaData = [];
+        celdas.forEach(celda => {
+            filaData.push('"' + celda.textContent.replace(/"/g, '""') + '"');
+        });
+        csv += filaData.join(',') + '\n';
+    });
+    
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const enlace = document.createElement('a');
+    enlace.href = URL.createObjectURL(blob);
+    enlace.download = `${nombre}_${new Date().toISOString().split('T')[0]}.csv`;
+    enlace.click();
+}
+
+// Agregar event listeners para teclas de acceso rápido
+document.addEventListener('keydown', function(e) {
+    // Ctrl + números para cambiar secciones
+    if (e.ctrlKey && !e.shiftKey && !e.altKey) {
+        switch(e.key) {
+            case '1': showSection('dashboard'); e.preventDefault(); break;
+            case '2': showSection('movimientos'); e.preventDefault(); break;
+            case '3': showSection('cuentas'); e.preventDefault(); break;
+            case '4': showSection('balance'); e.preventDefault(); break;
+            case '5': showSection('balanza'); e.preventDefault(); break;
+            case '6': showSection('diario'); e.preventDefault(); break;
+            case '7': showSection('mayor'); e.preventDefault(); break;
+        }
     }
     
-    // Verificar autenticación
-    verificarAutenticacion();
+    // ESC para cerrar modales
+    if (e.key === 'Escape') {
+        const modal = document.getElementById('cuentaModal');
+        if (modal && modal.style.display === 'block') {
+            closeCuentaModal();
+        }
+    }
 });
 
-// Verificar autenticación
-async function verificarAutenticacion() {
-    const token = localStorage.getItem('auth_token');
-    const userData = localStorage.getItem('user_data');
-    
-    if (!token) {
-        window.location.href = '/login';
-        return;
+// Click fuera del modal para cerrarlo
+window.addEventListener('click', function(e) {
+    const modal = document.getElementById('cuentaModal');
+    if (e.target === modal) {
+        closeCuentaModal();
     }
+});
+
+// Función para búsqueda en tiempo real en tablas
+function filtrarTabla(inputId, tablaId) {
+    const input = document.getElementById(inputId);
+    const tabla = document.getElementById(tablaId);
     
-    authToken = token;
-    currentUser = userData ? JSON.parse(userData) : null;
+    if (!input || !tabla) return;
     
-    try {
-        const response = await fetch(`${API_BASE}/auth/verify`, {
-            headers: getAuthHeaders()
+    input.addEventListener('keyup', function() {
+        const filtro = this.value.toLowerCase();
+        const filas = tabla.querySelectorAll('tbody tr');
+        
+        filas.forEach(fila => {
+            const texto = fila.textContent.toLowerCase();
+            fila.style.display = texto.includes(filtro) ? '' : 'none';
         });
-        
-        if (response.ok) {
-            const data = await response.json();
-            currentUser = data.user;
-            localStorage.setItem('user_data', JSON.stringify(currentUser));
-            
-            // Mostrar información del usuario
-            document.getElementById('userName').textContent = 
-                `👤 ${currentUser.nombre} ${currentUser.apellidos} (${currentUser.rol})`;
-            
-            // Mostrar/ocultar elementos según el rol
-            configurarInterfazPorRol();
-            
-            // Cargar datos iniciales
-            await cargarDatosIniciales();
-            
-        } else {
-            throw new Error('Token inválido');
-        }
-    } catch (error) {
-        console.error('Error verificando autenticación:', error);
-        localStorage.removeItem('auth_token');
-        localStorage.removeItem('user_data');
-        window.location.href = '/login';
-    }
-}
-
-// Configurar interfaz según el rol del usuario
-function configurarInterfazPorRol() {
-    const adminElements = document.querySelectorAll('.admin-only');
-    const contadorElements = document.querySelectorAll('.contador-only');
-    
-    if (currentUser.rol === 'admin') {
-        adminElements.forEach(el => el.style.display = '');
-        contadorElements.forEach(el => el.style.display = '');
-    } else if (currentUser.rol === 'contador') {
-        adminElements.forEach(el => el.style.display = 'none');
-        contadorElements.forEach(el => el.style.display = '');
-    } else {
-        adminElements.forEach(el => el.style.display = 'none');
-        contadorElements.forEach(el => el.style.display = 'none');
-    }
-}
-
-// Función de logout
-function logout() {
-    if (confirm('¿Estás seguro de que deseas cerrar sesión?')) {
-        fetch(`${API_BASE}/auth/logout`, {
-            method: 'POST',
-            headers: getAuthHeaders()
-        }).finally(() => {
-            localStorage.removeItem('auth_token');
-            localStorage.removeItem('user_data');
-            window.location.href = '/login';
-        });
-    }
-}
-
-// Mostrar secciones
-function showSection(sectionName) {
-    // Ocultar todas las secciones
-    document.querySelectorAll('.section').forEach(section => {
-        section.classList.remove('active');
-    });
-    
-    // Remover clase active de botones
-    document.querySelectorAll('.nav-btn').forEach(btn => {
-        btn.classList.remove('active');
-    });
-    
-    // Mostrar sección seleccionada
-    const section = document.getElementById(sectionName);
-    const button = event.target;
-    
-    if (section && button) {
-        section.classList.add('active');
-        button.classList.add('active');
-        
-        // Cargar datos específicos según la sección
-        switch (sectionName) {
-            case 'dashboard':
-                actualizarDashboard();
-                break;
-            case 'cuentas':
-                cargarCuentas();
-                break;
-            case 'balance':
-                generarBalanceGeneral();
-                break;
-            case 'balanza':
-                generarBalanzaComprobacion();
-                break;
-            case 'diario':
-                generarLibroDiario();
-                break;
-            case 'mayor':
-                generarLibroMayor();
-                break;
-            case 'usuarios':
-                if (currentUser.rol === 'admin') {
-                    cargarUsuarios();
-                }
-                break;
-        }
-    }
-}
-
-// Cargar datos iniciales
-async function cargarDatosIniciales() {
-    try {
-        await Promise.all([
-            cargarCuentas(),
-            cargarMovimientos()
-        ]);
-        
-        actualizarDashboard();
-        actualizarFechas();
-        
-    } catch (error) {
-        console.error('Error cargando datos iniciales:', error);
-        mostrarAlerta('error', 'Error cargando datos iniciales');
-    }
-}
-
-// Cargar catálogo de cuentas
-async function cargarCuentas() {
-    try {
-        const response = await fetch(`${API_BASE}/cuentas`, {
-            headers: getAuthHeaders()
-        });
-        
-        if (!response.ok) throw new Error('Error cargando cuentas');
-        
-        cuentas = await response.json();
-        
-        // Actualizar select de cuentas
-        actualizarSelectCuentas();
-        
-        // Actualizar tabla de cuentas
-        actualizarTablaCuentas();
-        
-    } catch (error) {
-        console.error('Error cargando cuentas:', error);
-        mostrarAlerta('error', 'Error cargando catálogo de cuentas');
-    }
-}
-
-// Actualizar select de cuentas en el formulario de movimientos
-function actualizarSelectCuentas() {
-    const selects = document.querySelectorAll('.cuenta-select');
-    selects.forEach(select => {
-        const currentValue = select.value;
-        select.innerHTML = '<option value="">Seleccionar cuenta</option>';
-        
-        cuentas.forEach(cuenta => {
-            const option = document.createElement('option');
-            option.value = cuenta.id;
-            option.textContent = `${cuenta.codigo} - ${cuenta.nombre}`;
-            option.dataset.naturaleza = cuenta.naturaleza;
-            select.appendChild(option);
-        });
-        
-        if (currentValue) {
-            select.value = currentValue;
-        }
     });
 }
 
-// Actualizar tabla de cuentas
-function actualizarTablaCuentas() {
-    const tbody = document.getElementById('cuentasBody');
-    if (!tbody) return;
-    
-    tbody.innerHTML = '';
-    
-    cuentas.forEach(cuenta => {
-        const row = tbody.insertRow();
-        row.insertCell(0).textContent = cuenta.codigo;
-        row.insertCell(1).textContent = cuenta.nombre;
-        row.insertCell(2).textContent = cuenta.tipo;
-        row.insertCell(3).textContent = cuenta.subtipo || '-';
-        row.insertCell(4).textContent = cuenta.naturaleza;
-        
-        if (currentUser.rol === 'admin' || currentUser.rol === 'contador') {
-            const actionsCell = row.insertCell(5);
-            actionsCell.className = 'contador-only';
-            actionsCell.innerHTML = `
-                <button class="btn btn-sm btn-warning" onclick="editarCuenta(${cuenta.id})">✏️</button>
-                <button class="btn btn-sm btn-danger" onclick="eliminarCuenta(${cuenta.id})">🗑️</button>
-            `;
-        }
-    });
-}
+// Inicializar filtros cuando se cargue el contenido
+document.addEventListener('DOMContentLoaded', function() {
+    // Agregar campos de búsqueda si no existen
+    setTimeout(() => {
+        agregarCamposBusqueda();
+    }, 1000);
+});
 
-// Cargar movimientos
-async function cargarMovimientos() {
-    try {
-        const response = await fetch(`${API_BASE}/movimientos`, {
-            headers: getAuthHeaders()
-        });
+function agregarCamposBusqueda() {
+    // Agregar búsqueda a tabla de cuentas
+    const cuentasSection = document.querySelector('#cuentas .section-header');
+    if (cuentasSection && !document.getElementById('buscarCuentas')) {
+        const inputBusqueda = document.createElement('input');
+        inputBusqueda.type = 'text';
+        inputBusqueda.id = 'buscarCuentas';
+        inputBusqueda.placeholder = '🔍 Buscar cuentas...';
+        inputBusqueda.className = 'search-input';
+        inputBusqueda.style.margin = '10px';
+        cuentasSection.appendChild(inputBusqueda);
         
-        if (!response.ok) throw new Error('Error cargando movimientos');
-        
-        movimientos = await response.json();
-        
-    } catch (error) {
-        console.error('Error cargando movimientos:', error);
-        mostrarAlerta('error', 'Error cargando movimientos');
+        filtrarTabla('buscarCuentas', 'cuentasTable');
     }
 }
 
-// Actualizar dashboard
-async function actualizarDashboard() {
-    try {
-        const response = await fetch(`${API_BASE}/saldos`, {
-            headers: getAuthHeaders()
-        });
-        
-        if (!response.ok) throw new Error('Error obteniendo saldos');
-        
-        const saldos = await response.json();
-        
-        let totalActivos = 0;
-        let totalPasivos = 0;
-        let totalCapital = 0;
-        
-        saldos.forEach(cuenta => {
-            const saldo = cuenta.saldo;
-            
-            switch (cuenta.tipo) {
-                case 'Activo':
-                    if (saldo > 0) totalActivos += saldo;
-                    break;
-                case 'Pasivo':
-                    if (saldo < 0) totalPasivos += Math.abs(saldo);
-                    break;
-                case 'Capital':
-                    if (saldo !== 0) totalCapital += Math.abs(saldo);
-                    break;
-            }
-        });
-        
-        document.getElementById('totalActivos').textContent = formatMoney(totalActivos);
-        document.getElementById('totalPasivos').textContent = formatMoney(totalPasivos);
-        document.getElementById('totalCapital').textContent = formatMoney(totalCapital);
-        document.getElementById('totalMovimientos').textContent = movimientos.length;
-        
-        // Most
+console.log('✅ Sistema Contable inicializado correctamente');
