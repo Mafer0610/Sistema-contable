@@ -10,15 +10,13 @@ class ContabilidadController {
                 return res.status(403).json({ error: 'Acceso denegado' });
             }
 
-            const { nombre, rfc, direccion, telefono, email } = req.body;
+            const { nombre } = req.body;
 
             if (!nombre) {
                 return res.status(400).json({ error: 'El nombre de la empresa es obligatorio' });
             }
 
-            const empresa = await this.contabilidadModel.createEmpresa({
-                nombre, rfc, direccion, telefono, email
-            });
+            const empresa = await this.contabilidadModel.createEmpresa({ nombre });
 
             res.status(201).json({
                 message: 'Empresa creada exitosamente',

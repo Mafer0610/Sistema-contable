@@ -5,13 +5,13 @@ class ContabilidadModel {
 
     // === GESTIÓN DE EMPRESAS ===
     async createEmpresa(empresaData) {
-        const { nombre, rfc, direccion, telefono, email } = empresaData;
+        const { nombre } = empresaData;
         try {
             const [result] = await this.db.execute(
-                'INSERT INTO empresas (nombre, rfc, direccion, telefono, email) VALUES (?, ?, ?, ?, ?)',
-                [nombre, rfc, direccion, telefono, email]
+                'INSERT INTO empresas (nombre) VALUES (?)',
+                [nombre]
             );
-            return { id: result.insertId, ...empresaData };
+            return { id: result.insertId, nombre };
         } catch (error) {
             throw error;
         }

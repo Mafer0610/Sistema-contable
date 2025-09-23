@@ -15,7 +15,7 @@
       border-radius: 20px;
       margin: 30px auto;
       padding: 40px;
-      max-width: 1000px;
+      max-width: 1200px;
       box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
       backdrop-filter: blur(10px);
       border: 1px solid rgba(255, 255, 255, 0.3);
@@ -23,15 +23,21 @@
     .page-title {
       color: #6b46a3;
       font-weight: bold;
-      font-size: 2.2rem;
+      font-size: 1.8rem;
       text-align: center;
-      margin-bottom: 10px;
+      margin-bottom: 5px;
     }
     .company-info {
       text-align: center;
       color: #8e7cc3;
-      margin-bottom: 30px;
+      margin-bottom: 10px;
       font-size: 1.1rem;
+    }
+    .date-info {
+      text-align: center;
+      color: #8e7cc3;
+      margin-bottom: 30px;
+      font-size: 1rem;
     }
     .btn-back {
       background: rgba(228, 165, 232, 0.8);
@@ -50,58 +56,10 @@
       color: white;
       text-decoration: none;
     }
-    .balance-table {
-      background: rgba(255, 255, 255, 0.9);
-      border-radius: 15px;
-      overflow: hidden;
-      border: 2px solid #e4a5e8;
-      margin-bottom: 20px;
-    }
-    .balance-table table {
-      margin: 0;
-    }
-    .section-header {
-      background: linear-gradient(135deg, #6b46a3, #8e7cc3);
-      color: white;
-      font-weight: bold;
-      text-transform: uppercase;
-      letter-spacing: 1px;
-      font-size: 1.1rem;
-    }
-    .subsection-header {
-      background: rgba(228, 165, 232, 0.6);
-      color: #6b46a3;
-      font-weight: 600;
-      font-size: 1rem;
-    }
-    .account-row {
-      background: rgba(255, 255, 255, 0.8);
-      border-bottom: 1px solid #e4a5e8;
-    }
-    .account-row:hover {
-      background: rgba(228, 165, 232, 0.2);
-    }
-    .total-row {
-      background: rgba(107, 70, 163, 0.1);
-      font-weight: bold;
-      color: #6b46a3;
-      border-top: 2px solid #6b46a3;
-    }
-    .grand-total {
-      background: linear-gradient(135deg, #6b46a3, #8e7cc3);
-      color: white;
-      font-weight: bold;
-      font-size: 1.1rem;
-    }
-    td, th {
-      padding: 12px 15px;
-      border: none;
-    }
-    .text-end {
-      text-align: right;
-    }
     .controls {
-      text-align: center;
+      background: rgba(228, 165, 232, 0.1);
+      border-radius: 15px;
+      padding: 20px;
       margin-bottom: 30px;
     }
     .btn-generate {
@@ -134,24 +92,90 @@
       background: #6b46a3;
       color: white;
     }
-    .date-info {
-      text-align: center;
-      color: #8e7cc3;
-      font-style: italic;
+    .balance-wrapper {
+      background: white;
+      border-radius: 15px;
+      overflow: hidden;
+      border: 2px solid #6b46a3;
       margin-bottom: 20px;
     }
+    .balance-table {
+      width: 100%;
+      margin: 0;
+      font-family: 'Courier New', monospace;
+      font-size: 0.9rem;
+    }
+    .balance-table th,
+    .balance-table td {
+      padding: 8px 12px;
+      border: 1px solid #6b46a3;
+      text-align: left;
+      vertical-align: top;
+    }
+    .header-empresa {
+      background: #6b46a3;
+      color: white;
+      font-weight: bold;
+      text-align: center;
+      font-size: 1rem;
+    }
+    .header-titulo {
+      background: #8e7cc3;
+      color: white;
+      font-weight: bold;
+      text-align: center;
+      font-size: 0.95rem;
+    }
+    .header-fecha {
+      background: #b19cd9;
+      color: white;
+      font-weight: bold;
+      text-align: center;
+      font-size: 0.9rem;
+    }
+    .header-columns {
+      background: #d4b3e0;
+      color: #6b46a3;
+      font-weight: bold;
+      text-align: center;
+      font-size: 0.85rem;
+    }
+    .section-title {
+      background: #f0f0f0;
+      font-weight: bold;
+      text-align: center;
+    }
+    .account-name {
+      padding-left: 20px;
+    }
+    .amount {
+      text-align: right;
+      font-weight: normal;
+    }
+    .total-row {
+      font-weight: bold;
+      background: #f8f9fa;
+    }
+    .grand-total {
+      font-weight: bold;
+      background: #e9ecef;
+      border-top: 2px solid #6b46a3;
+    }
+    .form-control, .form-select {
+      border: 2px solid #e0e0e0;
+      border-radius: 8px;
+      padding: 8px 12px;
+      transition: all 0.3s ease;
+    }
+    .form-control:focus, .form-select:focus {
+      border-color: #6b46a3;
+      box-shadow: 0 0 0 0.2rem rgba(107, 70, 163, 0.25);
+    }
     @media print {
-      body {
-        background: white;
-      }
-      .main-container {
-        background: white;
-        box-shadow: none;
-        border: none;
-      }
-      .btn-back, .controls {
-        display: none;
-      }
+      body { background: white; }
+      .main-container { background: white; box-shadow: none; border: none; }
+      .btn-back, .controls { display: none; }
+      .balance-table { font-size: 0.8rem; }
     }
   </style>
 </head>
@@ -159,44 +183,44 @@
   <div class="main-container">
     <a href="panel.html" class="btn-back">← Volver al Panel</a>
     
-    <h1 class="page-title">BALANCE GENERAL</h1>
-    <div class="company-info">
-      <strong>Sky Home S.A.</strong><br>
-      Al <span id="fechaBalance"></span>
-    </div>
-
     <div class="controls">
-      <button id="generateBtn" class="btn-generate">Generar Balance</button>
-      <button id="printBtn" class="btn-print" onclick="window.print()">Imprimir</button>
+      <div class="row align-items-end">
+        <div class="col-md-4">
+          <label for="fechaCorte" class="form-label">Fecha de Corte:</label>
+          <input type="date" id="fechaCorte" class="form-control">
+        </div>
+        <div class="col-md-4">
+          <label for="empresaSelect" class="form-label">Empresa:</label>
+          <select id="empresaSelect" class="form-select">
+            <option value="">Cargando empresas...</option>
+          </select>
+        </div>
+        <div class="col-md-4">
+          <div class="d-flex gap-2">
+            <button id="generateBtn" class="btn-generate">Generar Balance</button>
+            <button id="printBtn" class="btn-print" onclick="window.print()">Imprimir</button>
+          </div>
+        </div>
+      </div>
     </div>
 
-    <div class="date-info">
-      (Cifras expresadas en pesos mexicanos)
-    </div>
-
-    <!-- ACTIVO -->
-    <div class="balance-table">
-      <table class="table">
+    <div id="balanceContent" class="balance-wrapper" style="display: none;">
+      <table class="balance-table">
         <thead>
-          <tr class="section-header">
-            <th colspan="2">ACTIVO</th>
+          <tr class="header-empresa">
+            <td colspan="4" id="empresaNombre">Sky Home S.A.</td>
+          </tr>
+          <tr class="header-titulo">
+            <td colspan="4">Balance general al <span id="fechaBalance">19 de agosto</span></td>
+          </tr>
+          <tr class="header-columns">
+            <td width="25%">Activo</td>
+            <td width="25%"></td>
+            <td width="25%">Pasivo</td>
+            <td width="25%">Capital</td>
           </tr>
         </thead>
-        <tbody id="activoBody">
-          <!-- Contenido dinámico -->
-        </tbody>
-      </table>
-    </div>
-
-    <!-- PASIVO Y CAPITAL -->
-    <div class="balance-table">
-      <table class="table">
-        <thead>
-          <tr class="section-header">
-            <th colspan="2">PASIVO Y CAPITAL</th>
-          </tr>
-        </thead>
-        <tbody id="pasivoCapitalBody">
+        <tbody id="balanceBody">
           <!-- Contenido dinámico -->
         </tbody>
       </table>
@@ -204,185 +228,283 @@
   </div>
 
   <script>
-    // Establecer fecha actual
-    document.getElementById('fechaBalance').textContent = new Date().toLocaleDateString('es-MX', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric'
-    });
+    // Variables globales
+    let empresas = [];
+    let saldosData = [];
 
-    // Protege la página si no está logueado
+    // Proteger la página si no está logueado
     if (localStorage.getItem('loggedIn') !== 'true') {
       window.location.href = 'login.html';
     }
 
-    // Datos de ejemplo basados en el documento PDF
-    const cuentasBalance = {
-      activo: {
-        circulante: [
-          { nombre: 'Caja', saldo: 23120.00 },
-          { nombre: 'Banco', saldo: 67270.00 },
-          { nombre: 'Inventario', saldo: 27000.00 },
-          { nombre: 'IVA acreditable', saldo: 2200.00 },
-          { nombre: 'Rentas pag. x anticipado', saldo: 9000.00 },
-          { nombre: 'Papeleria y utiles', saldo: 3750.00 }
-        ],
-        fijo: [
-          { nombre: 'Terreno', saldo: 2000000.00 },
-          { nombre: 'Edificio', saldo: 3000000.00 },
-          { nombre: 'Mobiliario', saldo: 23000.00 },
-          { nombre: 'Equipo de computo', saldo: 22500.00 },
-          { nombre: 'Equipo de transporte', saldo: 65000.00 }
-        ]
-      },
-      pasivo: {
-        cortoPlazo: [
-          { nombre: 'Cuentas por pagar', saldo: 3480.00 },
-          { nombre: 'Doc por pagar', saldo: 5220.00 },
-          { nombre: 'IVA trasladado', saldo: 1440.00 },
-          { nombre: 'Anticipo clientes', saldo: 9000.00 }
-        ]
-      },
-      capital: [
-        { nombre: 'Capital', saldo: 5185000.00 }
-      ]
-    };
+    // Inicializar página
+    document.addEventListener('DOMContentLoaded', function() {
+      // Establecer fecha actual por defecto
+      const today = new Date();
+      document.getElementById('fechaCorte').value = today.toISOString().split('T')[0];
+      
+      // Cargar empresas
+      loadEmpresas();
+      
+      // Event listeners
+      document.getElementById('generateBtn').addEventListener('click', generarBalance);
+    });
 
-    function generarBalance() {
-      // Generar ACTIVO
-      const activoBody = document.getElementById('activoBody');
-      activoBody.innerHTML = '';
+    // Cargar lista de empresas
+    async function loadEmpresas() {
+      try {
+        const token = localStorage.getItem('token');
+        const response = await fetch('/api/empresas', {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
 
-      // Activo Circulante
-      activoBody.innerHTML += `
-        <tr class="subsection-header">
-          <td><strong>ACTIVO CIRCULANTE</strong></td>
-          <td></td>
-        </tr>
-      `;
+        if (response.ok) {
+          empresas = await response.json();
+          const select = document.getElementById('empresaSelect');
+          select.innerHTML = '<option value="">Todas las empresas</option>';
+          
+          empresas.forEach(empresa => {
+            const option = document.createElement('option');
+            option.value = empresa.id;
+            option.textContent = empresa.nombre;
+            select.appendChild(option);
+          });
 
-      let totalCirculante = 0;
-      cuentasBalance.activo.circulante.forEach(cuenta => {
-        totalCirculante += cuenta.saldo;
-        activoBody.innerHTML += `
-          <tr class="account-row">
-            <td style="padding-left: 30px;">${cuenta.nombre}</td>
-            <td class="text-end">$${cuenta.saldo.toLocaleString('es-MX', { minimumFractionDigits: 2 })}</td>
-          </tr>
-        `;
-      });
-
-      activoBody.innerHTML += `
-        <tr class="total-row">
-          <td><strong>Total Activo Circulante</strong></td>
-          <td class="text-end"><strong>$${totalCirculante.toLocaleString('es-MX', { minimumFractionDigits: 2 })}</strong></td>
-        </tr>
-      `;
-
-      // Activo Fijo
-      activoBody.innerHTML += `
-        <tr class="subsection-header">
-          <td><strong>ACTIVO FIJO</strong></td>
-          <td></td>
-        </tr>
-      `;
-
-      let totalFijo = 0;
-      cuentasBalance.activo.fijo.forEach(cuenta => {
-        totalFijo += cuenta.saldo;
-        activoBody.innerHTML += `
-          <tr class="account-row">
-            <td style="padding-left: 30px;">${cuenta.nombre}</td>
-            <td class="text-end">$${cuenta.saldo.toLocaleString('es-MX', { minimumFractionDigits: 2 })}</td>
-          </tr>
-        `;
-      });
-
-      activoBody.innerHTML += `
-        <tr class="total-row">
-          <td><strong>Total Activo Fijo</strong></td>
-          <td class="text-end"><strong>$${totalFijo.toLocaleString('es-MX', { minimumFractionDigits: 2 })}</strong></td>
-        </tr>
-      `;
-
-      const totalActivo = totalCirculante + totalFijo;
-      activoBody.innerHTML += `
-        <tr class="grand-total">
-          <td><strong>TOTAL ACTIVO</strong></td>
-          <td class="text-end"><strong>$${totalActivo.toLocaleString('es-MX', { minimumFractionDigits: 2 })}</strong></td>
-        </tr>
-      `;
-
-      // Generar PASIVO Y CAPITAL
-      const pasivoCapitalBody = document.getElementById('pasivoCapitalBody');
-      pasivoCapitalBody.innerHTML = '';
-
-      // Pasivo a Corto Plazo
-      pasivoCapitalBody.innerHTML += `
-        <tr class="subsection-header">
-          <td><strong>PASIVO A CORTO PLAZO</strong></td>
-          <td></td>
-        </tr>
-      `;
-
-      let totalPasivo = 0;
-      cuentasBalance.pasivo.cortoPlazo.forEach(cuenta => {
-        totalPasivo += cuenta.saldo;
-        pasivoCapitalBody.innerHTML += `
-          <tr class="account-row">
-            <td style="padding-left: 30px;">${cuenta.nombre}</td>
-            <td class="text-end">$${cuenta.saldo.toLocaleString('es-MX', { minimumFractionDigits: 2 })}</td>
-          </tr>
-        `;
-      });
-
-      pasivoCapitalBody.innerHTML += `
-        <tr class="total-row">
-          <td><strong>Total Pasivo</strong></td>
-          <td class="text-end"><strong>$${totalPasivo.toLocaleString('es-MX', { minimumFractionDigits: 2 })}</strong></td>
-        </tr>
-      `;
-
-      // Capital
-      pasivoCapitalBody.innerHTML += `
-        <tr class="subsection-header">
-          <td><strong>CAPITAL CONTABLE</strong></td>
-          <td></td>
-        </tr>
-      `;
-
-      let totalCapital = 0;
-      cuentasBalance.capital.forEach(cuenta => {
-        totalCapital += cuenta.saldo;
-        pasivoCapitalBody.innerHTML += `
-          <tr class="account-row">
-            <td style="padding-left: 30px;">${cuenta.nombre}</td>
-            <td class="text-end">$${cuenta.saldo.toLocaleString('es-MX', { minimumFractionDigits: 2 })}</td>
-          </tr>
-        `;
-      });
-
-      pasivoCapitalBody.innerHTML += `
-        <tr class="total-row">
-          <td><strong>Total Capital</strong></td>
-          <td class="text-end"><strong>$${totalCapital.toLocaleString('es-MX', { minimumFractionDigits: 2 })}</strong></td>
-        </tr>
-      `;
-
-      const totalPasivoCapital = totalPasivo + totalCapital;
-      pasivoCapitalBody.innerHTML += `
-        <tr class="grand-total">
-          <td><strong>TOTAL PASIVO + CAPITAL</strong></td>
-          <td class="text-end"><strong>$${totalPasivoCapital.toLocaleString('es-MX', { minimumFractionDigits: 2 })}</strong></td>
-        </tr>
-      `;
+          // Seleccionar primera empresa por defecto
+          if (empresas.length > 0) {
+            select.value = empresas[0].id;
+          }
+        }
+      } catch (error) {
+        console.error('Error cargando empresas:', error);
+      }
     }
 
-    // Event listener para generar balance
-    document.getElementById('generateBtn').addEventListener('click', generarBalance);
+    // Generar balance general
+    async function generarBalance() {
+      try {
+        const fechaCorte = document.getElementById('fechaCorte').value;
+        const empresaId = document.getElementById('empresaSelect').value;
 
-    // Generar balance al cargar la página
-    document.addEventListener('DOMContentLoaded', generarBalance);
+        if (!fechaCorte) {
+          alert('Por favor seleccione una fecha de corte');
+          return;
+        }
+
+        // Mostrar loading
+        document.getElementById('generateBtn').textContent = 'Generando...';
+        document.getElementById('generateBtn').disabled = true;
+
+        // Obtener saldos
+        const token = localStorage.getItem('token');
+        let url = '/api/saldos';
+        if (empresaId) {
+          url += `?empresaId=${empresaId}`;
+        }
+
+        const response = await fetch(url, {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+
+        if (response.ok) {
+          saldosData = await response.json();
+          renderBalance(fechaCorte, empresaId);
+        } else {
+          alert('Error obteniendo los saldos');
+        }
+
+      } catch (error) {
+        console.error('Error generando balance:', error);
+        alert('Error generando el balance');
+      } finally {
+        document.getElementById('generateBtn').textContent = 'Generar Balance';
+        document.getElementById('generateBtn').disabled = false;
+      }
+    }
+
+    // Renderizar balance
+    function renderBalance(fechaCorte, empresaId) {
+      // Actualizar headers
+      const empresaNombre = empresaId ? 
+        empresas.find(e => e.id == empresaId)?.nombre || 'Empresa' : 
+        'Consolidado';
+      document.getElementById('empresaNombre').textContent = empresaNombre;
+
+      const fecha = new Date(fechaCorte + 'T00:00:00');
+      document.getElementById('fechaBalance').textContent = fecha.toLocaleDateString('es-MX', {
+        day: 'numeric',
+        month: 'long',
+        year: 'numeric'
+      });
+
+      // Organizar datos
+      const balance = organizarBalance(saldosData);
+      
+      // Renderizar tabla
+      const tbody = document.getElementById('balanceBody');
+      tbody.innerHTML = '';
+
+      // Crear filas del balance
+      const maxRows = Math.max(
+        balance.activo.circulante.length + balance.activo.fijo.length + 3, // +3 para headers y totales
+        balance.pasivo.length + balance.capital.length + 2 // +2 para totales
+      );
+
+      let activoIndex = 0;
+      let pasivoIndex = 0;
+      let activoTotal = 0;
+      let pasivoCapitalTotal = 0;
+
+      for (let i = 0; i < maxRows; i++) {
+        const row = document.createElement('tr');
+        
+        // Columna Activo
+        let activoCell = '';
+        let activoAmount = '';
+        
+        if (i === 0) {
+          // Header activo circulante
+          activoCell = 'ACTIVO CIRCULANTE';
+          activoAmount = '';
+        } else if (i <= balance.activo.circulante.length) {
+          // Cuentas activo circulante
+          const cuenta = balance.activo.circulante[i - 1];
+          if (cuenta) {
+            activoCell = cuenta.nombre;
+            activoAmount = `$ ${cuenta.saldo.toLocaleString('es-MX', { minimumFractionDigits: 2 })}`;
+            activoTotal += cuenta.saldo;
+          }
+        } else if (i === balance.activo.circulante.length + 1) {
+          // Header activo fijo
+          activoCell = 'ACTIVO FIJO';
+          activoAmount = '';
+        } else if (i <= balance.activo.circulante.length + balance.activo.fijo.length + 1) {
+          // Cuentas activo fijo
+          const cuenta = balance.activo.fijo[i - balance.activo.circulante.length - 2];
+          if (cuenta) {
+            activoCell = cuenta.nombre;
+            activoAmount = `$ ${cuenta.saldo.toLocaleString('es-MX', { minimumFractionDigits: 2 })}`;
+            activoTotal += cuenta.saldo;
+          }
+        } else if (i === maxRows - 1) {
+          // Total activos
+          activoCell = 'Total activos';
+          activoAmount = `$ ${activoTotal.toLocaleString('es-MX', { minimumFractionDigits: 2 })}`;
+        }
+
+        // Columna Pasivo
+        let pasivoCell = '';
+        let pasivoAmount = '';
+        
+        if (i < balance.pasivo.length) {
+          const cuenta = balance.pasivo[i];
+          pasivoCell = cuenta.nombre;
+          pasivoAmount = `$ ${cuenta.saldo.toLocaleString('es-MX', { minimumFractionDigits: 2 })}`;
+          pasivoCapitalTotal += cuenta.saldo;
+        } else if (i === balance.pasivo.length && balance.pasivo.length > 0) {
+          pasivoCell = 'Total pasivo';
+          pasivoAmount = `$ ${balance.pasivo.reduce((sum, c) => sum + c.saldo, 0).toLocaleString('es-MX', { minimumFractionDigits: 2 })}`;
+        }
+
+        // Columna Capital
+        let capitalCell = '';
+        let capitalAmount = '';
+        
+        const capitalStartRow = Math.max(0, balance.pasivo.length + 1);
+        if (i >= capitalStartRow && i < capitalStartRow + balance.capital.length) {
+          const cuenta = balance.capital[i - capitalStartRow];
+          capitalCell = cuenta.nombre;
+          capitalAmount = `$ ${cuenta.saldo.toLocaleString('es-MX', { minimumFractionDigits: 2 })}`;
+          if (i >= balance.pasivo.length + 1) {
+            pasivoCapitalTotal += cuenta.saldo;
+          }
+        } else if (i === capitalStartRow + balance.capital.length && balance.capital.length > 0) {
+          capitalCell = 'Total capital';
+          capitalAmount = `$ ${balance.capital.reduce((sum, c) => sum + c.saldo, 0).toLocaleString('es-MX', { minimumFractionDigits: 2 })}`;
+        } else if (i === maxRows - 1) {
+          capitalCell = 'Total pasivo + capital';
+          capitalAmount = `$ ${pasivoCapitalTotal.toLocaleString('es-MX', { minimumFractionDigits: 2 })}`;
+        }
+
+        // Aplicar clases CSS
+        const isTotal = i === maxRows - 1;
+        const isHeader = activoCell.includes('ACTIVO') || pasivoCell === 'Total pasivo' || capitalCell === 'Total capital';
+        
+        row.className = isTotal ? 'grand-total' : (isHeader ? 'total-row' : '');
+
+        row.innerHTML = `
+          <td class="${isHeader ? '' : 'account-name'}">${activoCell}</td>
+          <td class="amount">${activoAmount}</td>
+          <td class="${isHeader ? '' : 'account-name'}">${pasivoCell}</td>
+          <td class="amount">${pasivoAmount || capitalAmount}</td>
+        `;
+
+        tbody.appendChild(row);
+      }
+
+      // Mostrar el balance
+      document.getElementById('balanceContent').style.display = 'block';
+    }
+
+    // Organizar saldos por tipo
+    function organizarBalance(saldos) {
+      const balance = {
+        activo: {
+          circulante: [],
+          fijo: []
+        },
+        pasivo: [],
+        capital: []
+      };
+
+      saldos.forEach(cuenta => {
+        const saldo = cuenta.saldo;
+        
+        switch (cuenta.tipo) {
+          case 'Activo':
+            if (saldo > 0) {
+              const item = {
+                codigo: cuenta.codigo,
+                nombre: cuenta.nombre,
+                saldo: saldo
+              };
+              
+              if (cuenta.subtipo && cuenta.subtipo.toLowerCase().includes('fijo')) {
+                balance.activo.fijo.push(item);
+              } else {
+                balance.activo.circulante.push(item);
+              }
+            }
+            break;
+            
+          case 'Pasivo':
+            if (saldo < 0) {
+              balance.pasivo.push({
+                codigo: cuenta.codigo,
+                nombre: cuenta.nombre,
+                saldo: Math.abs(saldo)
+              });
+            }
+            break;
+            
+          case 'Capital':
+            if (saldo !== 0) {
+              balance.capital.push({
+                codigo: cuenta.codigo,
+                nombre: cuenta.nombre,
+                saldo: Math.abs(saldo)
+              });
+            }
+            break;
+        }
+      });
+
+      return balance;
+    }
   </script>
 </body>
 </html>
