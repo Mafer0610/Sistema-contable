@@ -26,13 +26,13 @@ async function initializeDatabase() {
         try {
             await authModel.createUser({
                 username: 'admin',
-                password: 'admin123',
+                password: '123',
                 nombre: 'Administrador',
                 apellidos: 'del Sistema',
                 email: 'admin@contabd.com',
                 rol: 'admin'
             });
-            console.log('✅ Usuario administrador creado (admin/admin123)');
+            console.log('✅ Usuario administrador creado (admin/123)');
         } catch (error) {
             if (error.message === 'El usuario ya existe') {
                 console.log('ℹ️  Usuario administrador ya existe');
@@ -123,7 +123,7 @@ async function initializeDatabase() {
         console.log('=================================');
         console.log('📊 BASE DE DATOS: conta_bd');
         console.log('👤 USUARIO ADMIN: admin');
-        console.log('🔑 CONTRASEÑA: admin123');
+        console.log('🔑 CONTRASEÑA: 123');
         console.log('🏢 EMPRESA: Sky Home S.A. de C.V.');
         console.log('📋 CUENTAS: ' + cuentasBasicas.length + ' cuentas básicas');
         console.log('=================================\n');

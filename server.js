@@ -91,7 +91,7 @@ async function createDefaultAdmin(db) {
         
         if (existingAdmin[0].count === 0) {
             const bcrypt = require('bcrypt');
-            const hashedPassword = await bcrypt.hash('admin123', 10);
+            const hashedPassword = await bcrypt.hash('123', 10);
             
             await db.execute(
                 'INSERT INTO usuarios (username, password, nombre, apellidos, email, rol) VALUES (?, ?, ?, ?, ?, ?)',
@@ -100,7 +100,7 @@ async function createDefaultAdmin(db) {
             
             console.log('✅ Usuario administrador creado:');
             console.log('   👤 Usuario: admin');
-            console.log('   🔑 Contraseña: admin123');
+            console.log('   🔑 Contraseña: 123');
             console.log('   📧 Email: admin@conta.com\n');
         }
 
@@ -283,7 +283,7 @@ async function startServer() {
             console.log('');
             console.log('🎯 Credenciales de prueba:');
             console.log('   👤 Usuario: admin');
-            console.log('   🔑 Contraseña: admin123');
+            console.log('   🔑 Contraseña: 123');
             console.log('');
         });
     } catch (error) {
