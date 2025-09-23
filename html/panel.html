@@ -20,6 +20,30 @@
       backdrop-filter: blur(10px);
       border: 1px solid rgba(255, 255, 255, 0.3);
     }
+    .header-section {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 30px;
+      padding-bottom: 20px;
+      border-bottom: 2px solid #e4a5e8;
+    }
+    .user-info {
+      display: flex;
+      flex-direction: column;
+    }
+    .user-name {
+      font-size: 1.3rem;
+      font-weight: bold;
+      color: #6b46a3;
+      margin: 0;
+    }
+    .user-role {
+      font-size: 0.9rem;
+      color: #8e7cc3;
+      text-transform: uppercase;
+      font-weight: 600;
+    }
     .logout-btn {
       background: rgba(255, 255, 255, 0.9);
       color: #6b46a3;
@@ -27,15 +51,14 @@
       border-radius: 20px;
       padding: 8px 20px;
       font-weight: 600;
-      position: fixed;
-      top: 20px;
-      right: 20px;
-      z-index: 1000;
       transition: all 0.3s ease;
+      text-decoration: none;
+      display: inline-block;
     }
     .logout-btn:hover {
       background: #6b46a3;
       color: white;
+      text-decoration: none;
     }
     .menu-btn {
       background: #e4a5e8;
@@ -48,12 +71,15 @@
       margin: 5px;
       min-width: 200px;
       text-align: center;
+      text-decoration: none;
+      display: inline-block;
     }
     .menu-btn:hover {
       background: #d89cdc;
       transform: translateY(-3px);
       box-shadow: 0 5px 15px rgba(228, 165, 232, 0.4);
       color: #5a3a8a;
+      text-decoration: none;
     }
     .status-section {
       display: flex;
@@ -107,88 +133,137 @@
       grid-template-columns: 1fr 1fr 1fr;
       gap: 10px;
     }
+    .loading-overlay {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.5);
+      z-index: 9999;
+      align-items: center;
+      justify-content: center;
+    }
+    .loading-content {
+      background: white;
+      padding: 30px;
+      border-radius: 15px;
+      text-align: center;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+    }
+    @media (max-width: 768px) {
+      .btn-group-custom,
+      .btn-group-custom-bottom {
+        grid-template-columns: 1fr;
+      }
+      .status-section {
+        flex-direction: column;
+        gap: 15px;
+      }
+      .header-section {
+        flex-direction: column;
+        gap: 15px;
+        text-align: center;
+      }
+    }
   </style>
 </head>
 <body>
-  <button id="logoutBtn" class="logout-btn">Cerrar sesión</button>
-  
+  <!-- Loading overlay -->
+  <div id="loadingOverlay" class="loading-overlay">
+    <div class="loading-content">
+      <div class="spinner-border text-primary mb-3" role="status">
+        <span class="visually-hidden">Cargando...</span>
+      </div>
+      <div>Verificando autenticación...</div>
+    </div>
+  </div>
+
   <div class="main-container">
+    <!-- Header with user info and logout -->
+    <div class="header-section">
+      <div class="user-info">
+        <div class="user-name">Cargando...</div>
+        <div class="user-role">---</div>
+      </div>
+      <button id="logoutBtn" class="logout-btn">Cerrar sesión</button>
+    </div>
+
     <!-- Menu Buttons -->
     <div class="btn-group-custom">
-      <button class="menu-btn" onclick="location.href='regisMov.html'">Nuevo movimiento</button>
-      <button class="menu-btn" onclick="location.href='balance.html'">Balances generales</button>
-      <button class="menu-btn" onclick="location.href='diario.html'">Libro diario</button>
+      <a href="regisMov.html" class="menu-btn">Nuevo movimiento</a>
+      <a href="balance.html" class="menu-btn">Balances generales</a>
+      <a href="diario.html" class="menu-btn">Libro diario</a>
     </div>
     
     <div class="btn-group-custom-bottom">
-      <button class="menu-btn" onclick="location.href='mayor.html'">Libro mayor</button>
-      <button class="menu-btn" onclick="location.href='balanza.html'">Balanza comprobación</button>
-      <button class="menu-btn" onclick="location.href='estado.html'">Estados de resultados</button>
+      <a href="mayor.html" class="menu-btn">Libro mayor</a>
+      <a href="balanza.html" class="menu-btn">Balanza comprobación</a>
+      <a href="estado.html" class="menu-btn">Estados de resultados</a>
     </div>
 
     <!-- Status Section -->
     <div class="status-section">
       <div class="status-item">
         <div class="status-label">Compras:</div>
-        <div class="status-value" id="totalCompras">-</div>
+        <div class="status-value" id="totalCompras">$0.00</div>
       </div>
       <div class="status-item">
         <div class="status-label">Ventas:</div>
-        <div class="status-value" id="totalVentas">-</div>
+        <div class="status-value" id="totalVentas">$0.00</div>
       </div>
       <div class="status-item">
         <div class="status-label">Estado:</div>
-        <div class="status-value" id="estadoGeneral">-</div>
+        <div class="status-value" id="estadoGeneral">---</div>
+      </div>
+    </div>
+
+    <!-- Quick Actions -->
+    <div class="row mt-4">
+      <div class="col-md-6">
+        <div class="card">
+          <div class="card-header" style="background: #6b46a3; color: white;">
+            <h5 class="mb-0">Acciones Rápidas</h5>
+          </div>
+          <div class="card-body">
+            <div class="list-group list-group-flush">
+              <a href="/api/health" target="_blank" class="list-group-item list-group-item-action">
+                🔍 Estado del Sistema
+              </a>
+              <a href="#" onclick="loadServerData()" class="list-group-item list-group-item-action">
+                🔄 Actualizar Datos
+              </a>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-6">
+        <div class="card">
+          <div class="card-header" style="background: #8e7cc3; color: white;">
+            <h5 class="mb-0">Información del Sistema</h5>
+          </div>
+          <div class="card-body">
+            <div id="systemInfo">
+              <div class="text-muted">Cargando información...</div>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   </div>
 
   <script>
-    // Cargar datos del dashboard al cargar la página
+    // Mostrar overlay de carga al iniciar
     document.addEventListener('DOMContentLoaded', function() {
-      loadDashboardData();
+      const loadingOverlay = document.getElementById('loadingOverlay');
+      loadingOverlay.style.display = 'flex';
+      
+      // Ocultar después de la verificación de autenticación
+      setTimeout(() => {
+        loadingOverlay.style.display = 'none';
+      }, 2000);
     });
-
-    function loadDashboardData() {
-      // Cargar movimientos recientes
-      const movimientos = JSON.parse(localStorage.getItem('movimientos')) || [];
-      const recentMovements = movimientos.slice(-5).reverse(); // Últimos 5 movimientos
-      
-      const tableBody = document.getElementById('recentMovements');
-      tableBody.innerHTML = '';
-      
-      if (recentMovements.length === 0) {
-        tableBody.innerHTML = '<tr><td colspan="3" class="text-center">No hay movimientos registrados</td></tr>';
-      } else {
-        recentMovements.forEach((mov, index) => {
-          const row = document.createElement('tr');
-          row.innerHTML = `
-            <td>${movimientos.length - index}</td>
-            <td>${mov.fecha}</td>
-            <td>${mov.cuenta} - Cargo: $${mov.cargo}, Abono: $${mov.abono}</td>
-          `;
-          tableBody.appendChild(row);
-        });
-      }
-
-      // Calcular totales
-      let totalCompras = 0;
-      let totalVentas = 0;
-
-      movimientos.forEach(mov => {
-        if (mov.cuenta.toLowerCase().includes('compra')) {
-          totalCompras += parseFloat(mov.cargo) + parseFloat(mov.abono);
-        } else if (mov.cuenta.toLowerCase().includes('venta')) {
-          totalVentas += parseFloat(mov.cargo) + parseFloat(mov.abono);
-        }
-      });
-
-      document.getElementById('totalCompras').textContent = `$${totalCompras.toFixed(2)}`;
-      document.getElementById('totalVentas').textContent = `$${totalVentas.toFixed(2)}`;
-      
-      const balance = totalVentas - totalCompras;
-      document.getElementById('estadoGeneral').textContent = balance >= 0 ? 'Positivo' : 'Negativo';
-    }
   </script>
 </body>
 </html>

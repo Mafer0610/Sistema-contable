@@ -243,27 +243,6 @@ async function initializeApp() {
   }
 }
 
-// Configurar rutas
-function setupRoutes() {
-  try {
-    // Verificar que los controladores estén inicializados
-    if (!authController || !contabilidadController || !authMiddleware) {
-      throw new Error('Controladores o middleware no inicializados');
-    }
-
-    const authRoutes = createAuthRoutes(authController, authMiddleware);
-    const contabilidadRoutes = createContabilidadRoutes(contabilidadController, authMiddleware);
-
-    app.use('/api/auth', authRoutes);
-    app.use('/api', contabilidadRoutes);
-
-    console.log('✅ Rutas API configuradas');
-  } catch (error) {
-    console.error('❌ Error configurando rutas:', error);
-    throw error;
-  }
-}
-
 // Verificar y crear datos iniciales básicos
 async function checkAndCreateInitialData(db) {
   try {
@@ -311,6 +290,27 @@ async function checkAndCreateInitialData(db) {
 
   } catch (error) {
     console.error('❌ Error verificando datos iniciales:', error);
+    throw error;
+  }
+}
+
+function setupRoutes() {
+  try {
+    // Verificar que los controladores estén inicializados
+    if (!authController || !contabilidadController || !authMiddleware) {
+      throw new Error('Controladores o middleware no inicializados');
+    }
+
+    const authRoutes = createAuthRoutes(authController, authMiddleware);
+    const contabilidadRoutes = createContabilidadRoutes(contabilidadController, authMiddleware);
+
+    // CONFIGURAR LAS RUTAS AQUÍ
+    app.use('/api/auth', authRoutes);
+    app.use('/api', contabilidadRoutes);
+
+    console.log('✅ Rutas API configuradas');
+  } catch (error) {
+    console.error('❌ Error configurando rutas:', error);
     throw error;
   }
 }
@@ -399,13 +399,22 @@ app.post('/api/setup/admin', requireInitialization, async (req, res) => {
   }
 });
 
-// Aplicar middleware de inicialización a todas las rutas API excepto health
 app.use('/api', (req, res, next) => {
-  // Excluir la ruta de health check
-  if (req.path === '/health') {
+  // Excluir rutas que no necesitan inicialización completa
+  if (req.path === '/health' || req.path === '/setup/admin') {
     return next();
   }
-  return requireInitialization(req, res, next);
+  
+  // Verificar si está inicializado
+  if (!isInitialized) {
+    return res.status(503).json({ 
+      error: 'Sistema no inicializado completamente',
+      message: 'Por favor espere a que el sistema termine de inicializarse',
+      initialized: false
+    });
+  }
+  
+  next();
 });
 
 // Middleware de manejo de errores

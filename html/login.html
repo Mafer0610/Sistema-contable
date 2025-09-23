@@ -64,6 +64,11 @@
       transform: translateY(-2px);
       box-shadow: 0 5px 15px rgba(107, 70, 163, 0.4);
     }
+    .btn-login:disabled {
+      opacity: 0.6;
+      transform: none;
+      box-shadow: none;
+    }
     .forgot-password {
       color: #8e7cc3;
       text-decoration: none;
@@ -76,12 +81,36 @@
       color: #6b46a3;
       text-decoration: underline;
     }
+    .auth-message {
+      border-radius: 10px;
+      padding: 10px 15px;
+      margin: 15px 0;
+      font-size: 0.9rem;
+    }
+    .loading-spinner {
+      display: none;
+      text-align: center;
+      margin: 20px 0;
+    }
+    .spinner-border-sm {
+      width: 1rem;
+      height: 1rem;
+    }
   </style>
 </head>
 <body class="d-flex align-items-center justify-content-center vh-100">
   <div class="login-card">
     <div class="brand-title">SKY<br>HOME</div>
     <div class="login-subtitle">Iniciar Sesión</div>
+    
+    <!-- Loading indicator -->
+    <div id="loadingIndicator" class="loading-spinner">
+      <div class="spinner-border spinner-border-sm text-primary" role="status">
+        <span class="visually-hidden">Verificando...</span>
+      </div>
+      <div class="mt-2 text-muted">Verificando autenticación...</div>
+    </div>
+    
     <form id="loginForm">
       <div class="mb-3">
         <input type="text" id="username" class="form-control" placeholder="Usuario" required>
@@ -93,5 +122,23 @@
     </form>
     <a href="#" class="forgot-password">¿Olvidaste tu contraseña?</a>
   </div>
+
+  <script>
+    // Mostrar indicador de carga inicial
+    document.addEventListener('DOMContentLoaded', function() {
+      const loadingIndicator = document.getElementById('loadingIndicator');
+      const loginForm = document.getElementById('loginForm');
+      
+      // Mostrar loading mientras se verifica la autenticación
+      loadingIndicator.style.display = 'block';
+      loginForm.style.display = 'none';
+      
+      // Ocultar loading después de un momento
+      setTimeout(() => {
+        loadingIndicator.style.display = 'none';
+        loginForm.style.display = 'block';
+      }, 1000);
+    });
+  </script>
 </body>
 </html>
