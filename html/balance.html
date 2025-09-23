@@ -161,13 +161,13 @@
       background: #e9ecef;
       border-top: 2px solid #6b46a3;
     }
-    .form-control, .form-select {
+    .form-control {
       border: 2px solid #e0e0e0;
       border-radius: 8px;
       padding: 8px 12px;
       transition: all 0.3s ease;
     }
-    .form-control:focus, .form-select:focus {
+    .form-control:focus {
       border-color: #6b46a3;
       box-shadow: 0 0 0 0.2rem rgba(107, 70, 163, 0.25);
     }
@@ -185,17 +185,11 @@
     
     <div class="controls">
       <div class="row align-items-end">
-        <div class="col-md-4">
+        <div class="col-md-6">
           <label for="fechaCorte" class="form-label">Fecha de Corte:</label>
           <input type="date" id="fechaCorte" class="form-control">
         </div>
-        <div class="col-md-4">
-          <label for="empresaSelect" class="form-label">Empresa:</label>
-          <select id="empresaSelect" class="form-select">
-            <option value="">Cargando empresas...</option>
-          </select>
-        </div>
-        <div class="col-md-4">
+        <div class="col-md-6">
           <div class="d-flex gap-2">
             <button id="generateBtn" class="btn-generate">Generar Balance</button>
             <button id="printBtn" class="btn-print" onclick="window.print()">Imprimir</button>
@@ -229,12 +223,25 @@
 
   <script>
     // Variables globales
-    let empresas = [];
     let saldosData = [];
 
     // Proteger la página si no está logueado
-    if (localStorage.getItem('loggedIn') !== 'true') {
-      window.location.href = 'login.html';
+    function checkAuth() {
+      const token = localStorage.getItem('token');
+      const loggedIn = localStorage.getItem('loggedIn');
+      
+      if (!token || loggedIn !== 'true') {
+        window.location.href = 'login.html';
+        return false;
+      }
+      return true;
+    }
+
+    // Solo verificar auth si no estamos ya en login
+    if (window.location.pathname !== '/login.html' && !window.location.pathname.includes('login')) {
+      if (!checkAuth()) {
+        // Salir si no está autenticado
+      }
     }
 
     // Inicializar página
@@ -243,50 +250,14 @@
       const today = new Date();
       document.getElementById('fechaCorte').value = today.toISOString().split('T')[0];
       
-      // Cargar empresas
-      loadEmpresas();
-      
       // Event listeners
       document.getElementById('generateBtn').addEventListener('click', generarBalance);
     });
-
-    // Cargar lista de empresas
-    async function loadEmpresas() {
-      try {
-        const token = localStorage.getItem('token');
-        const response = await fetch('/api/empresas', {
-          headers: {
-            'Authorization': `Bearer ${token}`
-          }
-        });
-
-        if (response.ok) {
-          empresas = await response.json();
-          const select = document.getElementById('empresaSelect');
-          select.innerHTML = '<option value="">Todas las empresas</option>';
-          
-          empresas.forEach(empresa => {
-            const option = document.createElement('option');
-            option.value = empresa.id;
-            option.textContent = empresa.nombre;
-            select.appendChild(option);
-          });
-
-          // Seleccionar primera empresa por defecto
-          if (empresas.length > 0) {
-            select.value = empresas[0].id;
-          }
-        }
-      } catch (error) {
-        console.error('Error cargando empresas:', error);
-      }
-    }
 
     // Generar balance general
     async function generarBalance() {
       try {
         const fechaCorte = document.getElementById('fechaCorte').value;
-        const empresaId = document.getElementById('empresaSelect').value;
 
         if (!fechaCorte) {
           alert('Por favor seleccione una fecha de corte');
@@ -299,12 +270,7 @@
 
         // Obtener saldos
         const token = localStorage.getItem('token');
-        let url = '/api/saldos';
-        if (empresaId) {
-          url += `?empresaId=${empresaId}`;
-        }
-
-        const response = await fetch(url, {
+        const response = await fetch('/api/saldos', {
           headers: {
             'Authorization': `Bearer ${token}`
           }
@@ -312,7 +278,11 @@
 
         if (response.ok) {
           saldosData = await response.json();
-          renderBalance(fechaCorte, empresaId);
+          renderBalance(fechaCorte);
+        } else if (response.status === 401) {
+          alert('Sesión expirada. Por favor inicie sesión nuevamente.');
+          localStorage.clear();
+          window.location.href = 'login.html';
         } else {
           alert('Error obteniendo los saldos');
         }
@@ -327,12 +297,9 @@
     }
 
     // Renderizar balance
-    function renderBalance(fechaCorte, empresaId) {
+    function renderBalance(fechaCorte) {
       // Actualizar headers
-      const empresaNombre = empresaId ? 
-        empresas.find(e => e.id == empresaId)?.nombre || 'Empresa' : 
-        'Consolidado';
-      document.getElementById('empresaNombre').textContent = empresaNombre;
+      document.getElementById('empresaNombre').textContent = 'Sky Home S.A.';
 
       const fecha = new Date(fechaCorte + 'T00:00:00');
       document.getElementById('fechaBalance').textContent = fecha.toLocaleDateString('es-MX', {
