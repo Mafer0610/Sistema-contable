@@ -77,30 +77,6 @@
       color: white;
       text-decoration: none;
     }
-    .btn-add-cuenta {
-      background: rgba(76, 175, 80, 0.8);
-      color: white;
-      border: none;
-      border-radius: 8px;
-      padding: 8px 16px;
-      font-size: 0.9rem;
-      transition: all 0.3s ease;
-    }
-    .btn-add-cuenta:hover {
-      background: rgba(76, 175, 80, 1);
-    }
-    .btn-remove-cuenta {
-      background: rgba(244, 67, 54, 0.8);
-      color: white;
-      border: none;
-      border-radius: 8px;
-      padding: 8px 16px;
-      font-size: 0.9rem;
-      transition: all 0.3s ease;
-    }
-    .btn-remove-cuenta:hover {
-      background: rgba(244, 67, 54, 1);
-    }
     .table-container {
       background: rgba(255, 255, 255, 0.8);
       border-radius: 15px;
@@ -125,34 +101,19 @@
       font-size: 1.5rem;
       margin: 30px 0 20px 0;
     }
-    .cuenta-row {
-      background: rgba(228, 165, 232, 0.1);
+    .alert {
       border-radius: 10px;
       padding: 15px;
-      margin-bottom: 15px;
-      border: 1px solid #e4a5e8;
+      margin: 15px 0;
     }
-    .totales-section {
-      background: rgba(107, 70, 163, 0.1);
-      border-radius: 10px;
-      padding: 20px;
-      margin: 20px 0;
-      border: 2px solid #6b46a3;
+    .btn-danger {
+      background: #dc3545;
+      border: none;
+      border-radius: 8px;
+      padding: 5px 15px;
     }
-    .total-amount {
-      font-size: 1.2rem;
-      font-weight: bold;
-      color: #6b46a3;
-    }
-    .balance-warning {
-      color: #d32f2f;
-      font-weight: bold;
-      font-size: 1rem;
-    }
-    .balance-success {
-      color: #388e3c;
-      font-weight: bold;
-      font-size: 1rem;
+    .btn-danger:hover {
+      background: #c82333;
     }
   </style>
 </head>
@@ -162,18 +123,41 @@
     
     <h1 class="page-title">Nuevo Movimiento Contable</h1>
     
+    <!-- Mensaje de estado -->
+    <div id="statusMessage" style="display: none;"></div>
+    
     <form id="movimientoForm">
       <div class="row">
-        <div class="col-md-6">
+        <div class="col-md-4">
           <div class="mb-3">
             <label for="fecha" class="form-label">Fecha</label>
             <input type="date" id="fecha" class="form-control" required>
           </div>
         </div>
-        <div class="col-md-6">
+        <div class="col-md-4">
+          <div class="mb-3">
+            <label for="cuenta" class="form-label">Cuenta</label>
+            <select id="cuenta" class="form-select" required>
+              <option value="">Seleccionar cuenta...</option>
+              <option value="1001 - Caja">1001 - Caja</option>
+              <option value="1002 - Bancos">1002 - Bancos</option>
+              <option value="1003 - Clientes">1003 - Clientes</option>
+              <option value="1004 - Inventarios">1004 - Inventarios</option>
+              <option value="1005 - Equipo de oficina">1005 - Equipo de oficina</option>
+              <option value="2001 - Proveedores">2001 - Proveedores</option>
+              <option value="2002 - Acreedores diversos">2002 - Acreedores diversos</option>
+              <option value="3001 - Capital social">3001 - Capital social</option>
+              <option value="4001 - Ventas">4001 - Ventas</option>
+              <option value="5001 - Compras">5001 - Compras</option>
+              <option value="5002 - Gastos de venta">5002 - Gastos de venta</option>
+              <option value="5003 - Gastos de administración">5003 - Gastos de administración</option>
+            </select>
+          </div>
+        </div>
+        <div class="col-md-4">
           <div class="mb-3">
             <label for="referencia" class="form-label">Referencia</label>
-            <input type="text" id="referencia" class="form-control" placeholder="Número de factura, recibo, etc.">
+            <input type="text" id="referencia" class="form-control" placeholder="Factura, recibo, etc.">
           </div>
         </div>
       </div>
@@ -183,36 +167,22 @@
         <input type="text" id="concepto" class="form-control" placeholder="Descripción del movimiento" required>
       </div>
 
-      <div class="section-title">
-        Cuentas del Movimiento
-        <button type="button" id="addCuentaBtn" class="btn-add-cuenta ms-3">+ Agregar Cuenta</button>
-      </div>
-
-      <div id="cuentasContainer">
-        <!-- Las cuentas se agregarán dinámicamente aquí -->
-      </div>
-
-      <div class="totales-section">
-        <div class="row text-center">
-          <div class="col-md-4">
-            <div>Total Debe:</div>
-            <div class="total-amount" id="totalDebe">$0.00</div>
-          </div>
-          <div class="col-md-4">
-            <div>Total Haber:</div>
-            <div class="total-amount" id="totalHaber">$0.00</div>
-          </div>
-          <div class="col-md-4">
-            <div>Diferencia:</div>
-            <div class="total-amount" id="diferencia">$0.00</div>
+      <div class="row">
+        <div class="col-md-6">
+          <div class="mb-3">
+            <label for="cargo" class="form-label">Cargo (Debe)</label>
+            <input type="number" id="cargo" class="form-control" step="0.01" min="0" value="0">
           </div>
         </div>
-        <div class="text-center mt-3">
-          <div id="balanceStatus" class="balance-warning">Asiento no balanceado</div>
+        <div class="col-md-6">
+          <div class="mb-3">
+            <label for="abono" class="form-label">Abono (Haber)</label>
+            <input type="number" id="abono" class="form-control" step="0.01" min="0" value="0">
+          </div>
         </div>
       </div>
       
-      <button type="submit" id="submitBtn" class="btn btn-save w-100" disabled>Guardar Movimiento</button>
+      <button type="submit" class="btn btn-save w-100">Guardar Movimiento</button>
     </form>
 
     <h2 class="section-title">Movimientos Registrados</h2>
@@ -221,18 +191,18 @@
         <table class="table">
           <thead>
             <tr>
-              <th>Asiento</th>
+              <th>#</th>
               <th>Fecha</th>
+              <th>Cuenta</th>
               <th>Concepto</th>
-              <th>Total Debe</th>
-              <th>Total Haber</th>
-              <th>Usuario</th>
+              <th>Cargo</th>
+              <th>Abono</th>
               <th>Acciones</th>
             </tr>
           </thead>
           <tbody id="movimientosTable">
             <tr>
-              <td colspan="7" class="text-center">Cargando movimientos...</td>
+              <td colspan="7" class="text-center">No hay movimientos registrados</td>
             </tr>
           </tbody>
         </table>
@@ -241,14 +211,24 @@
   </div>
 
   <script>
-    // Variables globales
-    let cuentasDisponibles = [];
-    let contadorCuentas = 0;
-
-    // Proteger la página si no está logueado
-    if (!localStorage.getItem('token') || localStorage.getItem('loggedIn') !== 'true') {
-      window.location.href = 'login.html';
+    // Verificar autenticación simple
+    function checkAuth() {
+      const loggedIn = localStorage.getItem('loggedIn');
+      if (loggedIn !== 'true') {
+        window.location.href = 'login.html';
+        return false;
+      }
+      return true;
     }
+
+    // Verificar auth al cargar
+    if (!checkAuth()) {
+      // Salir si no está autenticado
+    }
+
+    // Variables globales
+    let movimientos = JSON.parse(localStorage.getItem('movimientos')) || [];
+    let contadorMovimientos = movimientos.length;
 
     // Inicializar página
     document.addEventListener('DOMContentLoaded', function() {
@@ -256,270 +236,111 @@
       const today = new Date();
       document.getElementById('fecha').value = today.toISOString().split('T')[0];
       
-      // Cargar catálogo de cuentas
-      loadCuentas();
-      
-      // Cargar movimientos
-      loadMovimientos();
-      
       // Event listeners
-      document.getElementById('addCuentaBtn').addEventListener('click', agregarCuenta);
       document.getElementById('movimientoForm').addEventListener('submit', guardarMovimiento);
       
-      // Agregar primera fila de cuenta
-      agregarCuenta();
-      agregarCuenta(); // Mínimo 2 cuentas
+      // Validar que solo se llene cargo o abono
+      const cargoInput = document.getElementById('cargo');
+      const abonoInput = document.getElementById('abono');
+      
+      cargoInput.addEventListener('input', function() {
+        if (parseFloat(this.value) > 0) {
+          abonoInput.value = 0;
+        }
+      });
+      
+      abonoInput.addEventListener('input', function() {
+        if (parseFloat(this.value) > 0) {
+          cargoInput.value = 0;
+        }
+      });
+      
+      // Cargar movimientos
+      renderMovimientos();
     });
 
-    // Cargar catálogo de cuentas
-    async function loadCuentas() {
-      try {
-        const token = localStorage.getItem('token');
-        const response = await fetch('/api/cuentas', {
-          headers: {
-            'Authorization': `Bearer ${token}`
-          }
-        });
-
-        if (response.ok) {
-          cuentasDisponibles = await response.json();
-        } else if (response.status === 401) {
-          alert('Sesión expirada. Por favor inicie sesión nuevamente.');
-          localStorage.clear();
-          window.location.href = 'login.html';
-        } else {
-          console.error('Error cargando cuentas');
-        }
-      } catch (error) {
-        console.error('Error:', error);
-      }
-    }
-
-    // Agregar fila de cuenta
-    function agregarCuenta() {
-      contadorCuentas++;
-      const container = document.getElementById('cuentasContainer');
+    // Función para mostrar mensajes
+    function showMessage(message, type = 'info') {
+      const messageDiv = document.getElementById('statusMessage');
+      messageDiv.className = `alert alert-${type}`;
+      messageDiv.textContent = message;
+      messageDiv.style.display = 'block';
       
-      const cuentaDiv = document.createElement('div');
-      cuentaDiv.className = 'cuenta-row';
-      cuentaDiv.dataset.cuentaId = contadorCuentas;
-      
-      cuentaDiv.innerHTML = `
-        <div class="row align-items-end">
-          <div class="col-md-4">
-            <label class="form-label">Cuenta</label>
-            <select class="form-select cuenta-select" required>
-              <option value="">Seleccionar cuenta...</option>
-              ${cuentasDisponibles.map(cuenta => 
-                `<option value="${cuenta.id}" data-codigo="${cuenta.codigo}" data-nombre="${cuenta.nombre}">
-                  ${cuenta.codigo} - ${cuenta.nombre}
-                </option>`
-              ).join('')}
-            </select>
-          </div>
-          <div class="col-md-3">
-            <label class="form-label">Debe</label>
-            <input type="number" class="form-control debe-input" step="0.01" min="0" value="0">
-          </div>
-          <div class="col-md-3">
-            <label class="form-label">Haber</label>
-            <input type="number" class="form-control haber-input" step="0.01" min="0" value="0">
-          </div>
-          <div class="col-md-2">
-            <button type="button" class="btn-remove-cuenta w-100" onclick="removerCuenta(${contadorCuentas})">
-              Eliminar
-            </button>
-          </div>
-        </div>
-      `;
-      
-      container.appendChild(cuentaDiv);
-      
-      // Agregar event listeners para cálculo automático
-      const debeInput = cuentaDiv.querySelector('.debe-input');
-      const haberInput = cuentaDiv.querySelector('.haber-input');
-      
-      debeInput.addEventListener('input', calcularTotales);
-      haberInput.addEventListener('input', calcularTotales);
-      
-      // Validar que solo se llene debe o haber
-      debeInput.addEventListener('input', function() {
-        if (this.value > 0) {
-          haberInput.value = 0;
-        }
-        calcularTotales();
-      });
-      
-      haberInput.addEventListener('input', function() {
-        if (this.value > 0) {
-          debeInput.value = 0;
-        }
-        calcularTotales();
-      });
-      
-      calcularTotales();
-    }
-
-    // Remover cuenta
-    window.removerCuenta = function(id) {
-      const cuentaDiv = document.querySelector(`[data-cuenta-id="${id}"]`);
-      if (cuentaDiv) {
-        // No permitir eliminar si solo quedan 2 cuentas
-        const totalCuentas = document.querySelectorAll('.cuenta-row').length;
-        if (totalCuentas <= 2) {
-          alert('Debe tener al menos 2 cuentas en el movimiento');
-          return;
-        }
-        
-        cuentaDiv.remove();
-        calcularTotales();
-      }
-    };
-
-    // Calcular totales
-    function calcularTotales() {
-      const debeInputs = document.querySelectorAll('.debe-input');
-      const haberInputs = document.querySelectorAll('.haber-input');
-      
-      let totalDebe = 0;
-      let totalHaber = 0;
-      
-      debeInputs.forEach(input => {
-        totalDebe += parseFloat(input.value) || 0;
-      });
-      
-      haberInputs.forEach(input => {
-        totalHaber += parseFloat(input.value) || 0;
-      });
-      
-      document.getElementById('totalDebe').textContent = `${totalDebe.toFixed(2)}`;
-      document.getElementById('totalHaber').textContent = `${totalHaber.toFixed(2)}`;
-      
-      const diferencia = Math.abs(totalDebe - totalHaber);
-      document.getElementById('diferencia').textContent = `${diferencia.toFixed(2)}`;
-      
-      const balanceStatus = document.getElementById('balanceStatus');
-      const submitBtn = document.getElementById('submitBtn');
-      
-      if (diferencia < 0.01 && totalDebe > 0 && totalHaber > 0) {
-        balanceStatus.textContent = 'Asiento balanceado ✓';
-        balanceStatus.className = 'balance-success';
-        submitBtn.disabled = false;
-      } else {
-        balanceStatus.textContent = 'Asiento no balanceado';
-        balanceStatus.className = 'balance-warning';
-        submitBtn.disabled = true;
-      }
+      setTimeout(() => {
+        messageDiv.style.display = 'none';
+      }, 4000);
     }
 
     // Guardar movimiento
-    async function guardarMovimiento(e) {
+    function guardarMovimiento(e) {
       e.preventDefault();
       
       try {
         const fecha = document.getElementById('fecha').value;
+        const cuenta = document.getElementById('cuenta').value;
         const concepto = document.getElementById('concepto').value;
         const referencia = document.getElementById('referencia').value;
+        const cargo = parseFloat(document.getElementById('cargo').value) || 0;
+        const abono = parseFloat(document.getElementById('abono').value) || 0;
         
-        // Recopilar cuentas
-        const cuentas = [];
-        const cuentaRows = document.querySelectorAll('.cuenta-row');
-        
-        cuentaRows.forEach(row => {
-          const cuentaSelect = row.querySelector('.cuenta-select');
-          const debeInput = row.querySelector('.debe-input');
-          const haberInput = row.querySelector('.haber-input');
-          
-          const cuentaId = parseInt(cuentaSelect.value);
-          const debe = parseFloat(debeInput.value) || 0;
-          const haber = parseFloat(haberInput.value) || 0;
-          
-          if (cuentaId && (debe > 0 || haber > 0)) {
-            cuentas.push({
-              cuenta_id: cuentaId,
-              debe: debe,
-              haber: haber
-            });
-          }
-        });
-        
-        if (cuentas.length < 2) {
-          alert('Debe tener al menos 2 cuentas con valores');
+        // Validaciones
+        if (!fecha || !cuenta || !concepto) {
+          showMessage('Por favor complete todos los campos obligatorios', 'danger');
           return;
         }
         
-        // Enviar al servidor
-        const token = localStorage.getItem('token');
-        const response = await fetch('/api/movimientos', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`
-          },
-          body: JSON.stringify({
-            fecha,
-            concepto,
-            referencia,
-            cuentas
-          })
-        });
-        
-        const data = await response.json();
-        
-        if (response.ok) {
-          alert('Movimiento guardado exitosamente');
-          
-          // Limpiar formulario
-          document.getElementById('movimientoForm').reset();
-          document.getElementById('fecha').value = new Date().toISOString().split('T')[0];
-          
-          // Resetear cuentas
-          document.getElementById('cuentasContainer').innerHTML = '';
-          contadorCuentas = 0;
-          agregarCuenta();
-          agregarCuenta();
-          
-          // Recargar movimientos
-          loadMovimientos();
-        } else if (response.status === 401) {
-          alert('Sesión expirada. Por favor inicie sesión nuevamente.');
-          localStorage.clear();
-          window.location.href = 'login.html';
-        } else {
-          alert(data.error || 'Error guardando el movimiento');
+        if (cargo === 0 && abono === 0) {
+          showMessage('Debe ingresar un valor en Cargo o Abono', 'warning');
+          return;
         }
+        
+        if (cargo > 0 && abono > 0) {
+          showMessage('Solo puede ingresar un valor en Cargo O Abono, no ambos', 'warning');
+          return;
+        }
+        
+        // Obtener datos del usuario
+        const currentUser = JSON.parse(localStorage.getItem('currentUser')) || { nombre: 'Usuario', apellidos: 'Desconocido' };
+        
+        contadorMovimientos++;
+        
+        const nuevoMovimiento = {
+          id: contadorMovimientos,
+          asiento: contadorMovimientos,
+          fecha,
+          cuenta,
+          concepto,
+          referencia,
+          cargo,
+          abono,
+          usuario: `${currentUser.nombre} ${currentUser.apellidos}`,
+          timestamp: new Date().toISOString()
+        };
+        
+        // Guardar en array
+        movimientos.push(nuevoMovimiento);
+        
+        // Guardar en localStorage
+        localStorage.setItem('movimientos', JSON.stringify(movimientos));
+        
+        // Mostrar mensaje de éxito
+        showMessage('Movimiento guardado exitosamente', 'success');
+        
+        // Limpiar formulario
+        document.getElementById('movimientoForm').reset();
+        document.getElementById('fecha').value = new Date().toISOString().split('T')[0];
+        
+        // Actualizar tabla
+        renderMovimientos();
+        
       } catch (error) {
-        console.error('Error:', error);
-        alert('Error guardando el movimiento');
+        console.error('Error guardando movimiento:', error);
+        showMessage('Error guardando el movimiento', 'danger');
       }
     }
 
-    // Cargar movimientos
-    async function loadMovimientos() {
-      try {
-        const token = localStorage.getItem('token');
-        const response = await fetch('/api/movimientos', {
-          headers: {
-            'Authorization': `Bearer ${token}`
-          }
-        });
-
-        if (response.ok) {
-          const movimientos = await response.json();
-          renderMovimientos(movimientos);
-        } else if (response.status === 401) {
-          localStorage.clear();
-          window.location.href = 'login.html';
-        } else {
-          console.error('Error cargando movimientos');
-        }
-      } catch (error) {
-        console.error('Error:', error);
-      }
-    }
-
-    // Renderizar movimientos
-    function renderMovimientos(movimientos) {
+    // Renderizar movimientos en la tabla
+    function renderMovimientos() {
       const tbody = document.getElementById('movimientosTable');
       tbody.innerHTML = '';
       
@@ -528,17 +349,20 @@
         return;
       }
       
-      movimientos.forEach(mov => {
+      // Mostrar los últimos 10 movimientos
+      const movimientosRecientes = movimientos.slice(-10).reverse();
+      
+      movimientosRecientes.forEach((mov) => {
         const row = document.createElement('tr');
         row.innerHTML = `
-          <td>${mov.numero_asiento}</td>
+          <td>${mov.asiento}</td>
           <td>${mov.fecha}</td>
+          <td>${mov.cuenta}</td>
           <td>${mov.concepto}</td>
-          <td>${mov.totalDebe.toFixed(2)}</td>
-          <td>${mov.totalHaber.toFixed(2)}</td>
-          <td>${mov.usuario ? mov.usuario.nombre + ' ' + mov.usuario.apellidos : 'N/A'}</td>
+          <td class="text-end">${mov.cargo > 0 ? '$' + mov.cargo.toFixed(2) : '-'}</td>
+          <td class="text-end">${mov.abono > 0 ? '$' + mov.abono.toFixed(2) : '-'}</td>
           <td>
-            <button class="btn btn-sm btn-danger" onclick="eliminarMovimiento(${mov.id})">
+            <button class="btn btn-danger btn-sm" onclick="eliminarMovimiento(${mov.id})">
               Eliminar
             </button>
           </td>
@@ -548,34 +372,25 @@
     }
 
     // Eliminar movimiento
-    window.eliminarMovimiento = async function(id) {
+    window.eliminarMovimiento = function(id) {
       if (confirm('¿Está seguro de eliminar este movimiento?')) {
-        try {
-          const token = localStorage.getItem('token');
-          const response = await fetch(`/api/movimientos/${id}`, {
-            method: 'DELETE',
-            headers: {
-              'Authorization': `Bearer ${token}`
-            }
-          });
-
-          if (response.ok) {
-            alert('Movimiento eliminado correctamente');
-            loadMovimientos();
-          } else if (response.status === 401) {
-            alert('Sesión expirada. Por favor inicie sesión nuevamente.');
-            localStorage.clear();
-            window.location.href = 'login.html';
-          } else {
-            const data = await response.json();
-            alert(data.error || 'Error eliminando el movimiento');
-          }
-        } catch (error) {
-          console.error('Error:', error);
-          alert('Error eliminando el movimiento');
-        }
+        movimientos = movimientos.filter(mov => mov.id !== id);
+        localStorage.setItem('movimientos', JSON.stringify(movimientos));
+        renderMovimientos();
+        showMessage('Movimiento eliminado correctamente', 'info');
       }
     };
+
+    // Función para exportar datos (opcional)
+    function exportarDatos() {
+      const dataStr = JSON.stringify(movimientos, null, 2);
+      const dataBlob = new Blob([dataStr], {type: 'application/json'});
+      const url = URL.createObjectURL(dataBlob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = 'movimientos_contables.json';
+      link.click();
+    }
   </script>
 </body>
 </html>

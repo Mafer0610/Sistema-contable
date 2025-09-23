@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8">
-  <title>Balance General</title>
+  <title>Balance General - Sky Home</title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
   <style>
     body {
@@ -126,13 +126,6 @@
       text-align: center;
       font-size: 0.95rem;
     }
-    .header-fecha {
-      background: #b19cd9;
-      color: white;
-      font-weight: bold;
-      text-align: center;
-      font-size: 0.9rem;
-    }
     .header-columns {
       background: #d4b3e0;
       color: #6b46a3;
@@ -171,10 +164,39 @@
       border-color: #6b46a3;
       box-shadow: 0 0 0 0.2rem rgba(107, 70, 163, 0.25);
     }
+    .no-data-message {
+      text-align: center;
+      padding: 40px;
+      color: #8e7cc3;
+      font-size: 1.2rem;
+    }
+    .summary-cards {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 20px;
+      margin-bottom: 30px;
+    }
+    .summary-card {
+      background: rgba(228, 165, 232, 0.1);
+      border-radius: 15px;
+      padding: 20px;
+      text-align: center;
+      border: 2px solid #e4a5e8;
+    }
+    .summary-title {
+      color: #6b46a3;
+      font-weight: 600;
+      margin-bottom: 10px;
+    }
+    .summary-amount {
+      font-size: 1.5rem;
+      font-weight: bold;
+      color: #333;
+    }
     @media print {
       body { background: white; }
       .main-container { background: white; box-shadow: none; border: none; }
-      .btn-back, .controls { display: none; }
+      .btn-back, .controls, .summary-cards { display: none; }
       .balance-table { font-size: 0.8rem; }
     }
   </style>
@@ -198,20 +220,40 @@
       </div>
     </div>
 
+    <!-- Resumen de saldos -->
+    <div id="summaryCards" class="summary-cards" style="display: none;">
+      <div class="summary-card">
+        <div class="summary-title">Total Activos</div>
+        <div class="summary-amount" id="totalActivos">$0.00</div>
+      </div>
+      <div class="summary-card">
+        <div class="summary-title">Total Pasivos</div>
+        <div class="summary-amount" id="totalPasivos">$0.00</div>
+      </div>
+      <div class="summary-card">
+        <div class="summary-title">Total Capital</div>
+        <div class="summary-amount" id="totalCapital">$0.00</div>
+      </div>
+      <div class="summary-card">
+        <div class="summary-title">Diferencia</div>
+        <div class="summary-amount" id="diferencia">$0.00</div>
+      </div>
+    </div>
+
     <div id="balanceContent" class="balance-wrapper" style="display: none;">
       <table class="balance-table">
         <thead>
           <tr class="header-empresa">
-            <td colspan="4" id="empresaNombre">Sky Home S.A.</td>
+            <td colspan="4">Sky Home S.A. de C.V.</td>
           </tr>
           <tr class="header-titulo">
-            <td colspan="4">Balance general al <span id="fechaBalance">19 de agosto</span></td>
+            <td colspan="4">Balance General al <span id="fechaBalance">fecha</span></td>
           </tr>
           <tr class="header-columns">
             <td width="25%">Activo</td>
-            <td width="25%"></td>
-            <td width="25%">Pasivo</td>
-            <td width="25%">Capital</td>
+            <td width="25%">Importe</td>
+            <td width="25%">Pasivo y Capital</td>
+            <td width="25%">Importe</td>
           </tr>
         </thead>
         <tbody id="balanceBody">
@@ -219,43 +261,238 @@
         </tbody>
       </table>
     </div>
+
+    <!-- Mensaje cuando no hay datos -->
+    <div id="noDataMessage" class="no-data-message">
+      <p>No hay movimientos registrados para generar el balance.</p>
+      <p>Primero registre algunos movimientos contables desde <a href="regisMov.html">Nuevo Movimiento</a></p>
+    </div>
   </div>
 
   <script>
     // Variables globales
-    let saldosData = [];
+    let movimientos = [];
 
-    // Proteger la página si no está logueado
+    // Verificar autenticación simple
     function checkAuth() {
-      const token = localStorage.getItem('token');
       const loggedIn = localStorage.getItem('loggedIn');
-      
-      if (!token || loggedIn !== 'true') {
+      if (loggedIn !== 'true') {
         window.location.href = 'login.html';
         return false;
       }
       return true;
     }
 
-    // Solo verificar auth si no estamos ya en login
-    if (window.location.pathname !== '/login.html' && !window.location.pathname.includes('login')) {
-      if (!checkAuth()) {
-        // Salir si no está autenticado
-      }
+    // Calcular saldos por cuenta
+    function calcularSaldosPorCuenta(movimientos) {
+      const saldos = {};
+      
+      movimientos.forEach(function(mov) {
+        if (!saldos[mov.cuenta]) {
+          saldos[mov.cuenta] = {
+            cuenta: mov.cuenta,
+            cargo: 0,
+            abono: 0,
+            saldo: 0
+          };
+        }
+        
+        saldos[mov.cuenta].cargo += mov.cargo || 0;
+        saldos[mov.cuenta].abono += mov.abono || 0;
+      });
+      
+      // Calcular saldo final para cada cuenta
+      Object.keys(saldos).forEach(function(cuenta) {
+        saldos[cuenta].saldo = saldos[cuenta].cargo - saldos[cuenta].abono;
+      });
+      
+      return saldos;
     }
 
-    // Inicializar página
-    document.addEventListener('DOMContentLoaded', function() {
-      // Establecer fecha actual por defecto
-      const today = new Date();
-      document.getElementById('fechaCorte').value = today.toISOString().split('T')[0];
+    // Organizar saldos en estructura de balance
+    function organizarBalance(saldosCuentas) {
+      const balance = {
+        activos: [],
+        pasivos: [],
+        capital: []
+      };
+
+      Object.values(saldosCuentas).forEach(function(cuenta) {
+        const nombre = cuenta.cuenta;
+        const saldo = cuenta.saldo;
+        
+        if (saldo !== 0) {
+          // Clasificar por tipo de cuenta basado en el código
+          if (nombre.startsWith('1')) {
+            // Activos (códigos 1xxx)
+            if (saldo > 0) {
+              balance.activos.push({
+                nombre: nombre,
+                saldo: Math.abs(saldo)
+              });
+            }
+          } else if (nombre.startsWith('2')) {
+            // Pasivos (códigos 2xxx)
+            if (saldo < 0) {
+              balance.pasivos.push({
+                nombre: nombre,
+                saldo: Math.abs(saldo)
+              });
+            } else if (saldo > 0) {
+              balance.pasivos.push({
+                nombre: nombre + ' (Ajuste)',
+                saldo: saldo
+              });
+            }
+          } else if (nombre.startsWith('3')) {
+            // Capital (códigos 3xxx)
+            balance.capital.push({
+              nombre: nombre,
+              saldo: Math.abs(saldo)
+            });
+          } else if (nombre.startsWith('4')) {
+            // Ingresos (códigos 4xxx)
+            if (saldo < 0) {
+              balance.capital.push({
+                nombre: 'Utilidad por ' + nombre,
+                saldo: Math.abs(saldo)
+              });
+            }
+          } else if (nombre.startsWith('5')) {
+            // Gastos (códigos 5xxx)
+            if (saldo > 0) {
+              balance.capital.push({
+                nombre: 'Pérdida por ' + nombre,
+                saldo: -Math.abs(saldo)
+              });
+            }
+          }
+        }
+      });
+
+      return balance;
+    }
+
+    // Renderizar balance en la tabla
+    function renderBalance(fechaCorte, balance) {
+      // Actualizar fecha en el header
+      const fecha = new Date(fechaCorte + 'T00:00:00');
+      document.getElementById('fechaBalance').textContent = fecha.toLocaleDateString('es-MX', {
+        day: 'numeric',
+        month: 'long',
+        year: 'numeric'
+      });
+
+      // Calcular totales
+      const totalActivos = balance.activos.reduce(function(sum, item) {
+        return sum + item.saldo;
+      }, 0);
       
-      // Event listeners
-      document.getElementById('generateBtn').addEventListener('click', generarBalance);
-    });
+      const totalPasivos = balance.pasivos.reduce(function(sum, item) {
+        return sum + item.saldo;
+      }, 0);
+      
+      const totalCapital = balance.capital.reduce(function(sum, item) {
+        return sum + item.saldo;
+      }, 0);
+      
+      const totalPasivoCapital = totalPasivos + totalCapital;
+
+      // Actualizar cards de resumen
+      document.getElementById('totalActivos').textContent = '$' + totalActivos.toFixed(2);
+      document.getElementById('totalPasivos').textContent = '$' + totalPasivos.toFixed(2);
+      document.getElementById('totalCapital').textContent = '$' + totalCapital.toFixed(2);
+      document.getElementById('diferencia').textContent = '$' + (totalActivos - totalPasivoCapital).toFixed(2);
+      
+      // Mostrar cards de resumen
+      document.getElementById('summaryCards').style.display = 'grid';
+
+      // Renderizar tabla
+      const tbody = document.getElementById('balanceBody');
+      tbody.innerHTML = '';
+
+      // Determinar número máximo de filas
+      const maxRows = Math.max(
+        balance.activos.length + 2,
+        balance.pasivos.length + balance.capital.length + 3
+      );
+
+      let activoIndex = 0;
+      let pasivoIndex = 0;
+      let capitalIndex = 0;
+
+      for (let i = 0; i < maxRows; i++) {
+        const row = document.createElement('tr');
+        
+        // Columna Activo
+        let activoCell = '';
+        let activoAmount = '';
+        
+        if (i === 0 && balance.activos.length > 0) {
+          activoCell = 'ACTIVOS';
+          activoAmount = '';
+          row.className = 'section-title';
+        } else if (i > 0 && activoIndex < balance.activos.length) {
+          const activo = balance.activos[activoIndex];
+          activoCell = activo.nombre;
+          activoAmount = '$' + activo.saldo.toLocaleString('es-MX', { minimumFractionDigits: 2 });
+          activoIndex++;
+        } else if (i === balance.activos.length + 1 && balance.activos.length > 0) {
+          activoCell = 'TOTAL ACTIVOS';
+          activoAmount = '$' + totalActivos.toLocaleString('es-MX', { minimumFractionDigits: 2 });
+          row.className = 'total-row';
+        }
+
+        // Columnas Pasivo y Capital
+        let pasivoCapitalCell = '';
+        let pasivoCapitalAmount = '';
+        
+        if (i === 0 && balance.pasivos.length > 0) {
+          pasivoCapitalCell = 'PASIVOS';
+          pasivoCapitalAmount = '';
+          row.className = 'section-title';
+        } else if (i > 0 && pasivoIndex < balance.pasivos.length) {
+          const pasivo = balance.pasivos[pasivoIndex];
+          pasivoCapitalCell = pasivo.nombre;
+          pasivoCapitalAmount = '$' + pasivo.saldo.toLocaleString('es-MX', { minimumFractionDigits: 2 });
+          pasivoIndex++;
+        } else if (i === balance.pasivos.length + 1 && balance.pasivos.length > 0) {
+          pasivoCapitalCell = 'Total Pasivos';
+          pasivoCapitalAmount = '$' + totalPasivos.toLocaleString('es-MX', { minimumFractionDigits: 2 });
+          row.className = 'total-row';
+        } else if (i === balance.pasivos.length + 2 && balance.capital.length > 0) {
+          pasivoCapitalCell = 'CAPITAL';
+          pasivoCapitalAmount = '';
+          row.className = 'section-title';
+        } else if (capitalIndex < balance.capital.length) {
+          const capital = balance.capital[capitalIndex];
+          pasivoCapitalCell = capital.nombre;
+          pasivoCapitalAmount = '$' + capital.saldo.toLocaleString('es-MX', { minimumFractionDigits: 2 });
+          capitalIndex++;
+        } else if (i === maxRows - 1) {
+          pasivoCapitalCell = 'TOTAL PASIVO + CAPITAL';
+          pasivoCapitalAmount = '$' + totalPasivoCapital.toLocaleString('es-MX', { minimumFractionDigits: 2 });
+          row.className = 'grand-total';
+        }
+
+        // Aplicar clases CSS
+        const activoCellClass = (activoCell.startsWith('TOTAL') || activoCell === 'ACTIVOS') ? '' : 'account-name';
+        const pasivoCellClass = (pasivoCapitalCell.startsWith('TOTAL') || pasivoCapitalCell === 'PASIVOS' || pasivoCapitalCell === 'CAPITAL') ? '' : 'account-name';
+
+        row.innerHTML = '<td class="' + activoCellClass + '">' + activoCell + '</td>' +
+                       '<td class="amount">' + activoAmount + '</td>' +
+                       '<td class="' + pasivoCellClass + '">' + pasivoCapitalCell + '</td>' +
+                       '<td class="amount">' + pasivoCapitalAmount + '</td>';
+
+        tbody.appendChild(row);
+      }
+
+      // Mostrar el balance
+      document.getElementById('balanceContent').style.display = 'block';
+    }
 
     // Generar balance general
-    async function generarBalance() {
+    function generarBalance() {
       try {
         const fechaCorte = document.getElementById('fechaCorte').value;
 
@@ -268,24 +505,27 @@
         document.getElementById('generateBtn').textContent = 'Generando...';
         document.getElementById('generateBtn').disabled = true;
 
-        // Obtener saldos
-        const token = localStorage.getItem('token');
-        const response = await fetch('/api/saldos', {
-          headers: {
-            'Authorization': `Bearer ${token}`
-          }
+        // Filtrar movimientos hasta la fecha de corte
+        const movimientosFiltrados = movimientos.filter(function(mov) {
+          return mov.fecha <= fechaCorte;
         });
 
-        if (response.ok) {
-          saldosData = await response.json();
-          renderBalance(fechaCorte);
-        } else if (response.status === 401) {
-          alert('Sesión expirada. Por favor inicie sesión nuevamente.');
-          localStorage.clear();
-          window.location.href = 'login.html';
-        } else {
-          alert('Error obteniendo los saldos');
+        if (movimientosFiltrados.length === 0) {
+          alert('No hay movimientos registrados hasta la fecha seleccionada');
+          return;
         }
+
+        // Calcular saldos por cuenta
+        const saldosCuentas = calcularSaldosPorCuenta(movimientosFiltrados);
+        
+        // Organizar balance
+        const balance = organizarBalance(saldosCuentas);
+        
+        // Renderizar balance
+        renderBalance(fechaCorte, balance);
+        
+        // Ocultar mensaje de no datos
+        document.getElementById('noDataMessage').style.display = 'none';
 
       } catch (error) {
         console.error('Error generando balance:', error);
@@ -296,181 +536,27 @@
       }
     }
 
-    // Renderizar balance
-    function renderBalance(fechaCorte) {
-      // Actualizar headers
-      document.getElementById('empresaNombre').textContent = 'Sky Home S.A.';
-
-      const fecha = new Date(fechaCorte + 'T00:00:00');
-      document.getElementById('fechaBalance').textContent = fecha.toLocaleDateString('es-MX', {
-        day: 'numeric',
-        month: 'long',
-        year: 'numeric'
-      });
-
-      // Organizar datos
-      const balance = organizarBalance(saldosData);
-      
-      // Renderizar tabla
-      const tbody = document.getElementById('balanceBody');
-      tbody.innerHTML = '';
-
-      // Crear filas del balance
-      const maxRows = Math.max(
-        balance.activo.circulante.length + balance.activo.fijo.length + 3, // +3 para headers y totales
-        balance.pasivo.length + balance.capital.length + 2 // +2 para totales
-      );
-
-      let activoIndex = 0;
-      let pasivoIndex = 0;
-      let activoTotal = 0;
-      let pasivoCapitalTotal = 0;
-
-      for (let i = 0; i < maxRows; i++) {
-        const row = document.createElement('tr');
+    // Verificar auth al cargar
+    if (!checkAuth()) {
+      // Redirigir si no está autenticado
+    } else {
+      // Inicializar página
+      document.addEventListener('DOMContentLoaded', function() {
+        // Establecer fecha actual por defecto
+        const today = new Date();
+        document.getElementById('fechaCorte').value = today.toISOString().split('T')[0];
         
-        // Columna Activo
-        let activoCell = '';
-        let activoAmount = '';
+        // Event listener
+        document.getElementById('generateBtn').addEventListener('click', generarBalance);
         
-        if (i === 0) {
-          // Header activo circulante
-          activoCell = 'ACTIVO CIRCULANTE';
-          activoAmount = '';
-        } else if (i <= balance.activo.circulante.length) {
-          // Cuentas activo circulante
-          const cuenta = balance.activo.circulante[i - 1];
-          if (cuenta) {
-            activoCell = cuenta.nombre;
-            activoAmount = `$ ${cuenta.saldo.toLocaleString('es-MX', { minimumFractionDigits: 2 })}`;
-            activoTotal += cuenta.saldo;
-          }
-        } else if (i === balance.activo.circulante.length + 1) {
-          // Header activo fijo
-          activoCell = 'ACTIVO FIJO';
-          activoAmount = '';
-        } else if (i <= balance.activo.circulante.length + balance.activo.fijo.length + 1) {
-          // Cuentas activo fijo
-          const cuenta = balance.activo.fijo[i - balance.activo.circulante.length - 2];
-          if (cuenta) {
-            activoCell = cuenta.nombre;
-            activoAmount = `$ ${cuenta.saldo.toLocaleString('es-MX', { minimumFractionDigits: 2 })}`;
-            activoTotal += cuenta.saldo;
-          }
-        } else if (i === maxRows - 1) {
-          // Total activos
-          activoCell = 'Total activos';
-          activoAmount = `$ ${activoTotal.toLocaleString('es-MX', { minimumFractionDigits: 2 })}`;
-        }
-
-        // Columna Pasivo
-        let pasivoCell = '';
-        let pasivoAmount = '';
+        // Cargar movimientos
+        movimientos = JSON.parse(localStorage.getItem('movimientos')) || [];
         
-        if (i < balance.pasivo.length) {
-          const cuenta = balance.pasivo[i];
-          pasivoCell = cuenta.nombre;
-          pasivoAmount = `$ ${cuenta.saldo.toLocaleString('es-MX', { minimumFractionDigits: 2 })}`;
-          pasivoCapitalTotal += cuenta.saldo;
-        } else if (i === balance.pasivo.length && balance.pasivo.length > 0) {
-          pasivoCell = 'Total pasivo';
-          pasivoAmount = `$ ${balance.pasivo.reduce((sum, c) => sum + c.saldo, 0).toLocaleString('es-MX', { minimumFractionDigits: 2 })}`;
-        }
-
-        // Columna Capital
-        let capitalCell = '';
-        let capitalAmount = '';
-        
-        const capitalStartRow = Math.max(0, balance.pasivo.length + 1);
-        if (i >= capitalStartRow && i < capitalStartRow + balance.capital.length) {
-          const cuenta = balance.capital[i - capitalStartRow];
-          capitalCell = cuenta.nombre;
-          capitalAmount = `$ ${cuenta.saldo.toLocaleString('es-MX', { minimumFractionDigits: 2 })}`;
-          if (i >= balance.pasivo.length + 1) {
-            pasivoCapitalTotal += cuenta.saldo;
-          }
-        } else if (i === capitalStartRow + balance.capital.length && balance.capital.length > 0) {
-          capitalCell = 'Total capital';
-          capitalAmount = `$ ${balance.capital.reduce((sum, c) => sum + c.saldo, 0).toLocaleString('es-MX', { minimumFractionDigits: 2 })}`;
-        } else if (i === maxRows - 1) {
-          capitalCell = 'Total pasivo + capital';
-          capitalAmount = `$ ${pasivoCapitalTotal.toLocaleString('es-MX', { minimumFractionDigits: 2 })}`;
-        }
-
-        // Aplicar clases CSS
-        const isTotal = i === maxRows - 1;
-        const isHeader = activoCell.includes('ACTIVO') || pasivoCell === 'Total pasivo' || capitalCell === 'Total capital';
-        
-        row.className = isTotal ? 'grand-total' : (isHeader ? 'total-row' : '');
-
-        row.innerHTML = `
-          <td class="${isHeader ? '' : 'account-name'}">${activoCell}</td>
-          <td class="amount">${activoAmount}</td>
-          <td class="${isHeader ? '' : 'account-name'}">${pasivoCell}</td>
-          <td class="amount">${pasivoAmount || capitalAmount}</td>
-        `;
-
-        tbody.appendChild(row);
-      }
-
-      // Mostrar el balance
-      document.getElementById('balanceContent').style.display = 'block';
-    }
-
-    // Organizar saldos por tipo
-    function organizarBalance(saldos) {
-      const balance = {
-        activo: {
-          circulante: [],
-          fijo: []
-        },
-        pasivo: [],
-        capital: []
-      };
-
-      saldos.forEach(cuenta => {
-        const saldo = cuenta.saldo;
-        
-        switch (cuenta.tipo) {
-          case 'Activo':
-            if (saldo > 0) {
-              const item = {
-                codigo: cuenta.codigo,
-                nombre: cuenta.nombre,
-                saldo: saldo
-              };
-              
-              if (cuenta.subtipo && cuenta.subtipo.toLowerCase().includes('fijo')) {
-                balance.activo.fijo.push(item);
-              } else {
-                balance.activo.circulante.push(item);
-              }
-            }
-            break;
-            
-          case 'Pasivo':
-            if (saldo < 0) {
-              balance.pasivo.push({
-                codigo: cuenta.codigo,
-                nombre: cuenta.nombre,
-                saldo: Math.abs(saldo)
-              });
-            }
-            break;
-            
-          case 'Capital':
-            if (saldo !== 0) {
-              balance.capital.push({
-                codigo: cuenta.codigo,
-                nombre: cuenta.nombre,
-                saldo: Math.abs(saldo)
-              });
-            }
-            break;
+        // Si no hay movimientos, mostrar mensaje
+        if (movimientos.length === 0) {
+          document.getElementById('noDataMessage').style.display = 'block';
         }
       });
-
-      return balance;
     }
   </script>
 </body>
