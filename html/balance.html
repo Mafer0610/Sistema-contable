@@ -217,10 +217,18 @@
     @keyframes spin {
       to { transform: rotate(360deg); }
     }
+    .debug-info {
+      background: #f8f9fa;
+      border: 1px solid #dee2e6;
+      border-radius: 5px;
+      padding: 15px;
+      margin-bottom: 20px;
+      font-size: 0.9rem;
+    }
     @media print {
       body { background: white; }
       .main-container { background: white; box-shadow: none; border: none; }
-      .btn-back, .controls, .summary-cards { display: none; }
+      .btn-back, .controls, .summary-cards, .debug-info { display: none; }
       .balance-table { font-size: 0.8rem; }
     }
   </style>
@@ -232,19 +240,33 @@
     <!-- Mensaje de estado -->
     <div id="statusMessage" style="display: none;"></div>
     
+    <!-- Debug Info -->
+    <div id="debugInfo" class="debug-info" style="display: none;">
+      <h6>Información de Debug:</h6>
+      <div id="debugContent"></div>
+    </div>
+    
     <div class="controls">
       <div class="row align-items-end">
-        <div class="col-md-4">
+        <div class="col-md-3">
           <label for="empresaSelect" class="form-label">Empresa:</label>
           <select id="empresaSelect" class="form-select">
-            <option value="">Cargando empresas...</option>
+            <option value="">Sky Home S.A. de C.V.</option>
           </select>
         </div>
-        <div class="col-md-4">
+        <div class="col-md-3">
           <label for="fechaCorte" class="form-label">Fecha de Corte:</label>
           <input type="date" id="fechaCorte" class="form-control">
         </div>
-        <div class="col-md-4">
+        <div class="col-md-3">
+          <div class="form-check">
+            <input class="form-check-input" type="checkbox" id="debugMode">
+            <label class="form-check-label" for="debugMode">
+              Modo Debug
+            </label>
+          </div>
+        </div>
+        <div class="col-md-3">
           <div class="d-flex gap-2">
             <button id="generateBtn" class="btn-generate">
               Generar Balance
@@ -305,24 +327,37 @@
   </div>
 
   <script>
-    // Configuración de la API
-    const API_BASE = window.location.origin + '/api';
-    
     // Variables globales
-    let empresas = [];
+    const API_BASE = window.location.origin + '/api';
+    let empresas = [{ id: 1, nombre: 'Sky Home S.A. de C.V.' }];
     let authToken = null;
+    let debugMode = false;
+
+    // Debug function
+    function debugLog(message, data = null) {
+      if (debugMode) {
+        console.log(message, data);
+        const debugContent = document.getElementById('debugContent');
+        const debugInfo = document.getElementById('debugInfo');
+        debugInfo.style.display = 'block';
+        debugContent.innerHTML += `<div><strong>${new Date().toLocaleTimeString()}:</strong> ${message}</div>`;
+        if (data) {
+          debugContent.innerHTML += `<pre>${JSON.stringify(data, null, 2)}</pre>`;
+        }
+      }
+    }
 
     // Verificar autenticación
     function checkAuth() {
-      // Primero intentar con el método actual (localStorage simple)
       const loggedIn = localStorage.getItem('loggedIn');
       if (loggedIn === 'true') {
+        debugLog('Autenticación: localStorage OK');
         return true;
       }
       
-      // Si no, intentar con JWT
       authToken = localStorage.getItem('authToken');
       if (authToken) {
+        debugLog('Autenticación: JWT Token encontrado');
         return true;
       }
       
@@ -340,6 +375,8 @@
       messageDiv.textContent = message;
       messageDiv.style.display = 'block';
       
+      debugLog(`Mensaje mostrado: ${type}`, message);
+      
       if (type !== 'danger') {
         setTimeout(() => {
           messageDiv.style.display = 'none';
@@ -347,94 +384,95 @@
       }
     }
 
-    // Función para hacer peticiones autenticadas
+    // Función mejorada para hacer peticiones
     async function fetchWithAuth(url, options = {}) {
-      // Si no hay authToken, intentar hacer la petición sin autenticación
-      if (!authToken) {
-        try {
-          const response = await fetch(url, options);
-          if (response.ok) {
-            return await response.json();
-          } else {
-            // Si falla sin auth, intentar generar datos desde localStorage
-            return generateMockDataFromLocalStorage(url);
-          }
-        } catch (error) {
-          return generateMockDataFromLocalStorage(url);
-        }
-      }
-
-      const headers = {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${authToken}`,
-        ...options.headers
-      };
-
+      debugLog('Haciendo petición a:', url);
+      
       try {
-        const response = await fetch(url, { ...options, headers });
-        
-        if (response.status === 401) {
-          // Si falla JWT, intentar sin autenticación
-          try {
-            const fallbackResponse = await fetch(url, options);
-            if (fallbackResponse.ok) {
-              return await fallbackResponse.json();
-            } else {
-              return generateMockDataFromLocalStorage(url);
-            }
-          } catch {
-            return generateMockDataFromLocalStorage(url);
+        // Intentar primero con la API
+        if (authToken) {
+          const headers = {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${authToken}`,
+            ...options.headers
+          };
+          
+          const response = await fetch(url, { ...options, headers });
+          
+          if (response.ok) {
+            const data = await response.json();
+            debugLog('API Response exitosa:', data);
+            return data;
+          } else {
+            debugLog('API Response error:', response.status);
           }
         }
+
+        // Fallback a datos locales
+        debugLog('Usando fallback a datos locales');
+        return handleLocalStorageMode(url, options);
         
-        if (!response.ok) {
-          const errorData = await response.json().catch(() => ({ error: 'Error del servidor' }));
-          throw new Error(errorData.error || `Error HTTP ${response.status}`);
-        }
-        
-        return await response.json();
       } catch (error) {
-        console.error('Error en petición:', error);
-        return generateMockDataFromLocalStorage(url);
+        debugLog('Error en petición, usando localStorage:', error);
+        return handleLocalStorageMode(url, options);
       }
     }
 
-    // Generar datos mock desde localStorage para compatibilidad
-    function generateMockDataFromLocalStorage(url) {
-      const movimientos = JSON.parse(localStorage.getItem('movimientos')) || [];
-      
-      if (url.includes('/empresas')) {
-        return [{ id: 1, nombre: 'Sky Home S.A. de C.V.' }];
-      }
+    // Manejar modo localStorage mejorado
+    function handleLocalStorageMode(url, options) {
+      debugLog('Modo localStorage activado para:', url);
       
       if (url.includes('/balance-general')) {
-        return generateBalanceFromMovimientos(movimientos);
+        const movimientos = JSON.parse(localStorage.getItem('movimientos')) || [];
+        debugLog('Movimientos desde localStorage:', movimientos);
+        
+        return Promise.resolve(generateBalanceFromLocalStorage(movimientos));
       }
       
-      return null;
+      return Promise.resolve(null);
     }
 
-    // Generar balance desde movimientos de localStorage
-    function generateBalanceFromMovimientos(movimientos) {
+    // Generar balance desde localStorage mejorado
+    function generateBalanceFromLocalStorage(movimientos) {
+      debugLog('Generando balance desde localStorage con movimientos:', movimientos.length);
+      
       const fechaCorte = document.getElementById('fechaCorte').value;
       
       // Filtrar movimientos hasta la fecha de corte
-      const movimientosFiltrados = movimientos.filter(mov => mov.fecha <= fechaCorte);
+      const movimientosFiltrados = movimientos.filter(mov => {
+        const fechaMov = new Date(mov.fecha);
+        const fechaCorteDate = new Date(fechaCorte + 'T23:59:59');
+        return fechaMov <= fechaCorteDate;
+      });
+      
+      debugLog('Movimientos filtrados por fecha:', movimientosFiltrados.length);
       
       if (movimientosFiltrados.length === 0) {
-        return { activo: { total: 0, circulante: [], fijo: [] }, pasivo: { total: 0, corto_plazo: [], largo_plazo: [] }, capital: { total: 0, cuentas: [] } };
+        return { 
+          activo: { total: 0, circulante: [], fijo: [] }, 
+          pasivo: { total: 0, corto_plazo: [], largo_plazo: [] }, 
+          capital: { total: 0, cuentas: [] } 
+        };
       }
 
       // Calcular saldos por cuenta
-      const saldos = {};
+      const saldosCuentas = {};
+      
       movimientosFiltrados.forEach(mov => {
-        const cuenta = mov.cuenta || 'Sin clasificar';
-        if (!saldos[cuenta]) {
-          saldos[cuenta] = { debe: 0, haber: 0 };
+        const nombreCuenta = mov.cuenta || 'Sin Cuenta';
+        const cargo = parseFloat(mov.cargo) || 0;
+        const abono = parseFloat(mov.abono) || 0;
+        
+        if (!saldosCuentas[nombreCuenta]) {
+          saldosCuentas[nombreCuenta] = { debe: 0, haber: 0, saldo: 0 };
         }
-        saldos[cuenta].debe += mov.cargo || 0;
-        saldos[cuenta].haber += mov.abono || 0;
+        
+        saldosCuentas[nombreCuenta].debe += cargo;
+        saldosCuentas[nombreCuenta].haber += abono;
+        saldosCuentas[nombreCuenta].saldo = saldosCuentas[nombreCuenta].debe - saldosCuentas[nombreCuenta].haber;
       });
+      
+      debugLog('Saldos por cuenta calculados:', saldosCuentas);
 
       const balance = {
         activo: { total: 0, circulante: [], fijo: [] },
@@ -442,78 +480,113 @@
         capital: { total: 0, cuentas: [] }
       };
 
-      Object.entries(saldos).forEach(([cuenta, valores]) => {
-        const saldo = valores.debe - valores.haber;
+      // Clasificar cuentas
+      Object.entries(saldosCuentas).forEach(([nombreCuenta, datos]) => {
+        const saldo = Math.abs(datos.saldo);
         
-        if (Math.abs(saldo) > 0.01) { // Solo cuentas con saldo significativo
-          const item = { codigo: cuenta, nombre: cuenta, saldo: Math.abs(saldo) };
+        if (saldo > 0.01) { // Solo cuentas con saldo significativo
+          const codigo = extraerCodigo(nombreCuenta);
+          const nombre = extraerNombre(nombreCuenta);
+          const item = { codigo, nombre, saldo };
           
-          if (cuenta.startsWith('1') || cuenta.includes('Caja') || cuenta.includes('Bancos') || cuenta.includes('Clientes') || cuenta.includes('Inventarios')) {
-            // Activos
-            if (saldo > 0) {
-              balance.activo.circulante.push(item);
-              balance.activo.total += Math.abs(saldo);
-            }
-          } else if (cuenta.startsWith('2') || cuenta.includes('Proveedores') || cuenta.includes('Acreedores')) {
-            // Pasivos
-            if (saldo < 0) {
-              balance.pasivo.corto_plazo.push(item);
-              balance.pasivo.total += Math.abs(saldo);
-            }
-          } else if (cuenta.startsWith('3') || cuenta.includes('Capital')) {
-            // Capital
+          // Clasificación mejorada
+          if (esActivoCirculante(nombreCuenta, codigo)) {
+            balance.activo.circulante.push(item);
+            balance.activo.total += saldo;
+          } else if (esActivoFijo(nombreCuenta, codigo)) {
+            balance.activo.fijo.push(item);
+            balance.activo.total += saldo;
+          } else if (esPasivo(nombreCuenta, codigo)) {
+            balance.pasivo.corto_plazo.push(item);
+            balance.pasivo.total += saldo;
+          } else if (esCapital(nombreCuenta, codigo)) {
             balance.capital.cuentas.push(item);
-            balance.capital.total += Math.abs(saldo);
-          } else if (cuenta.startsWith('4') || cuenta.includes('Ventas') || cuenta.includes('Ingresos')) {
-            // Ingresos (van al capital)
-            if (saldo < 0) {
-              balance.capital.cuentas.push({ ...item, nombre: 'Utilidad por ' + cuenta });
-              balance.capital.total += Math.abs(saldo);
-            }
-          } else if (cuenta.startsWith('5') || cuenta.includes('Gastos') || cuenta.includes('Compras')) {
-            // Gastos (reducen el capital)
-            if (saldo > 0) {
-              balance.capital.cuentas.push({ ...item, nombre: 'Pérdida por ' + cuenta, saldo: -Math.abs(saldo) });
-              balance.capital.total -= Math.abs(saldo);
-            }
+            balance.capital.total += saldo;
+          } else if (esIngreso(nombreCuenta, codigo) && datos.saldo < 0) {
+            // Los ingresos van al capital (saldo negativo normal)
+            balance.capital.cuentas.push({ ...item, nombre: 'Utilidad - ' + nombre });
+            balance.capital.total += saldo;
+          } else if (esGasto(nombreCuenta, codigo) && datos.saldo > 0) {
+            // Los gastos reducen el capital (saldo positivo normal)
+            balance.capital.cuentas.push({ 
+              ...item, 
+              nombre: 'Pérdida - ' + nombre, 
+              saldo: -saldo 
+            });
+            balance.capital.total -= saldo;
           }
         }
       });
 
+      debugLog('Balance generado:', balance);
       return balance;
     }
 
-    // Cargar empresas
-    async function loadEmpresas() {
-      try {
-        const data = await fetchWithAuth(`${API_BASE}/empresas`);
-        if (data) {
-          empresas = data;
-          const select = document.getElementById('empresaSelect');
-          select.innerHTML = '<option value="">Todas las empresas</option>';
-          
-          empresas.forEach(empresa => {
-            const option = document.createElement('option');
-            option.value = empresa.id;
-            option.textContent = empresa.nombre;
-            select.appendChild(option);
-          });
-
-          // Seleccionar la primera empresa por defecto
-          if (empresas.length > 0) {
-            select.value = empresas[0].id;
-          }
-        }
-      } catch (error) {
-        console.error('Error cargando empresas:', error);
-        showMessage('Error cargando empresas: ' + error.message, 'danger');
-      }
+    // Funciones auxiliares de clasificación
+    function extraerCodigo(nombreCuenta) {
+      const match = nombreCuenta.match(/^(\d+)/);
+      return match ? match[1] : '';
     }
 
-    // Obtener balance general desde la API
+    function extraerNombre(nombreCuenta) {
+      return nombreCuenta.replace(/^\d+\s*-\s*/, '').trim();
+    }
+
+    function esActivoCirculante(nombre, codigo) {
+      const nombreLower = nombre.toLowerCase();
+      return codigo.startsWith('1') || 
+             nombreLower.includes('caja') || 
+             nombreLower.includes('banco') || 
+             nombreLower.includes('cliente') || 
+             nombreLower.includes('inventario') ||
+             nombreLower.includes('deudor');
+    }
+
+    function esActivoFijo(nombre, codigo) {
+      const nombreLower = nombre.toLowerCase();
+      return nombreLower.includes('equipo') || 
+             nombreLower.includes('mobiliario') || 
+             nombreLower.includes('maquinaria') ||
+             nombreLower.includes('edificio') ||
+             nombreLower.includes('terreno');
+    }
+
+    function esPasivo(nombre, codigo) {
+      const nombreLower = nombre.toLowerCase();
+      return codigo.startsWith('2') || 
+             nombreLower.includes('proveedor') || 
+             nombreLower.includes('acreedor') || 
+             nombreLower.includes('prestamo') ||
+             nombreLower.includes('por pagar');
+    }
+
+    function esCapital(nombre, codigo) {
+      const nombreLower = nombre.toLowerCase();
+      return codigo.startsWith('3') || 
+             nombreLower.includes('capital') || 
+             nombreLower.includes('patrimonio') ||
+             nombreLower.includes('reserva');
+    }
+
+    function esIngreso(nombre, codigo) {
+      const nombreLower = nombre.toLowerCase();
+      return codigo.startsWith('4') || 
+             nombreLower.includes('venta') || 
+             nombreLower.includes('ingreso') ||
+             nombreLower.includes('producto');
+    }
+
+    function esGasto(nombre, codigo) {
+      const nombreLower = nombre.toLowerCase();
+      return codigo.startsWith('5') || 
+             nombreLower.includes('gasto') || 
+             nombreLower.includes('compra') ||
+             nombreLower.includes('costo');
+    }
+
+    // Obtener balance general
     async function getBalanceGeneral() {
       try {
-        const empresaId = document.getElementById('empresaSelect').value;
         const fechaCorte = document.getElementById('fechaCorte').value;
 
         if (!fechaCorte) {
@@ -521,32 +594,20 @@
         }
 
         let url = `${API_BASE}/balance-general?fechaCorte=${fechaCorte}`;
-        if (empresaId) {
-          url += `&empresaId=${empresaId}`;
-        }
-
         const balance = await fetchWithAuth(url);
+        
+        debugLog('Balance obtenido:', balance);
         return balance;
       } catch (error) {
+        debugLog('Error obteniendo balance:', error);
         throw error;
       }
     }
 
     // Renderizar balance en la tabla
     function renderBalance(balance) {
-      // Actualizar nombre de empresa
-      const empresaId = document.getElementById('empresaSelect').value;
-      let empresaNombre = 'Consolidado - Todas las Empresas';
+      debugLog('Renderizando balance:', balance);
       
-      if (empresaId) {
-        const empresa = empresas.find(e => e.id == empresaId);
-        if (empresa) {
-          empresaNombre = empresa.nombre;
-        }
-      }
-      
-      document.getElementById('empresaNombre').textContent = empresaNombre;
-
       // Actualizar fecha en el header
       const fechaCorte = document.getElementById('fechaCorte').value;
       const fecha = new Date(fechaCorte + 'T00:00:00');
@@ -590,8 +651,8 @@
 
       // Determinar número máximo de filas
       const maxRows = Math.max(
-        activosData.length + (balance.activo.circulante.length > 0 ? 1 : 0) + (balance.activo.fijo.length > 0 ? 1 : 0) + 1,
-        pasivosData.length + capitalData.length + (balance.pasivo.corto_plazo.length > 0 ? 1 : 0) + (balance.pasivo.largo_plazo.length > 0 ? 1 : 0) + (capitalData.length > 0 ? 1 : 0) + 2
+        activosData.length + 3, // +3 para secciones y total
+        pasivosData.length + capitalData.length + 5 // +5 para secciones, totales y gran total
       );
 
       let activoIndex = 0;
@@ -622,7 +683,7 @@
             activoAmount = '$' + activo.saldo.toLocaleString('es-MX', { minimumFractionDigits: 2 });
             activoIndex++;
           }
-        } else if (i === activosData.length + (balance.activo.circulante.length > 0 ? 1 : 0) + (balance.activo.fijo.length > 0 ? 1 : 0)) {
+        } else if (i === activosData.length + 2) {
           activoCell = 'TOTAL ACTIVOS';
           activoAmount = '$' + totalActivos.toLocaleString('es-MX', { minimumFractionDigits: 2 });
           row.className = 'total-row';
@@ -638,7 +699,7 @@
         if (pasivoIndex < totalPasivoItems) {
           const pasivo = pasivosData[pasivoIndex];
           
-          if (currentPasivoSection !== pasivo.seccion) {
+                      if (currentPasivoSection !== pasivo.seccion) {
             pasivoCapitalCell = pasivo.seccion;
             pasivoCapitalAmount = '';
             currentPasivoSection = pasivo.seccion;
@@ -666,7 +727,7 @@
             pasivoCapitalAmount = '$' + capital.saldo.toLocaleString('es-MX', { minimumFractionDigits: 2 });
             capitalIndex++;
           }
-        } else if (capitalIndex === totalCapitalItems && totalCapital > 0) {
+        } else if (capitalIndex === totalCapitalItems && totalCapital !== 0) {
           pasivoCapitalCell = 'Total Capital';
           pasivoCapitalAmount = '$' + totalCapital.toLocaleString('es-MX', { minimumFractionDigits: 2 });
           capitalIndex++;
@@ -704,6 +765,7 @@
         btn.innerHTML = '<span class="loading-spinner"></span>Generando...';
         btn.disabled = true;
 
+        debugLog('Iniciando generación de balance...');
         const balance = await getBalanceGeneral();
         
         if (!balance || (!balance.activo?.total && !balance.pasivo?.total && !balance.capital?.total)) {
@@ -730,6 +792,36 @@
       }
     }
 
+    // Función para verificar datos en localStorage
+    function verificarDatosLocalStorage() {
+      const movimientos = JSON.parse(localStorage.getItem('movimientos')) || [];
+      debugLog('Verificación de datos localStorage:', {
+        totalMovimientos: movimientos.length,
+        movimientos: movimientos.slice(0, 3) // Mostrar solo los primeros 3
+      });
+      
+      if (movimientos.length > 0) {
+        showMessage(`Se encontraron ${movimientos.length} movimientos en localStorage`, 'info');
+      } else {
+        showMessage('No se encontraron movimientos en localStorage', 'warning');
+      }
+    }
+
+    // Función para testear la conexión API
+    async function testearConexionAPI() {
+      debugLog('Testeando conexión API...');
+      
+      try {
+        const response = await fetch(`${API_BASE}/health`);
+        const data = await response.json();
+        debugLog('API Health Check:', data);
+        showMessage('Conexión API: ' + data.status, data.status === 'OK' ? 'success' : 'warning');
+      } catch (error) {
+        debugLog('Error en API Health Check:', error);
+        showMessage('API no disponible, usando datos locales', 'warning');
+      }
+    }
+
     // Inicialización
     document.addEventListener('DOMContentLoaded', async function() {
       if (!checkAuth()) return;
@@ -741,13 +833,23 @@
       // Event listeners
       document.getElementById('generateBtn').addEventListener('click', generarBalance);
       
-      // Cargar datos iniciales
-      await loadEmpresas();
+      document.getElementById('debugMode').addEventListener('change', function(e) {
+        debugMode = e.target.checked;
+        if (debugMode) {
+          document.getElementById('debugInfo').style.display = 'block';
+          debugLog('Modo debug activado');
+          verificarDatosLocalStorage();
+          testearConexionAPI();
+        } else {
+          document.getElementById('debugInfo').style.display = 'none';
+          document.getElementById('debugContent').innerHTML = '';
+        }
+      });
       
-      // Auto-generar si hay empresas
-      if (empresas.length > 0) {
-        setTimeout(() => generarBalance(), 1000);
-      }
+      // Auto-generar balance al cargar
+      setTimeout(() => {
+        generarBalance();
+      }, 1000);
     });
   </script>
 </body>

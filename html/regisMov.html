@@ -197,12 +197,7 @@
             <input type="text" id="concepto" class="form-control" placeholder="Descripción del movimiento" required>
           </div>
         </div>
-        <div class="col-md-3">
-          <div class="mb-3">
-            <label for="referencia" class="form-label">Referencia</label>
-            <input type="text" id="referencia" class="form-control" placeholder="Factura, recibo, etc.">
-          </div>
-        </div>
+
       </div>
 
       <div class="cuentas-container">
@@ -252,517 +247,514 @@
       </div>
     </div>
   </div>
-
   <script>
-    // Configuración de la API
-    const API_BASE = window.location.origin + '/api';
-    
-    // Variables globales
-    let cuentas = [];
-    let movimientos = [];
-    let contadorCuentas = 0;
-    let authToken = null;
-
-    // Verificar autenticación
-    function checkAuth() {
-      // Primero intentar con el método actual (localStorage simple)
-      const loggedIn = localStorage.getItem('loggedIn');
-      if (loggedIn === 'true') {
-        return true;
-      }
+      // Configuración de la API
+      const API_BASE = window.location.origin + '/api';
       
-      // Si no, intentar con JWT
-      authToken = localStorage.getItem('authToken');
-      if (authToken) {
-        return true;
-      }
-      
-      showMessage('Sesión expirada. Redirigiendo al login...', 'warning');
-      setTimeout(() => {
-        window.location.href = 'login.html';
-      }, 2000);
-      return false;
-    }
+      // Variables globales
+      let cuentas = [];
+      let movimientos = [];
+      let contadorCuentas = 0;
+      let authToken = null;
 
-    // Función para mostrar mensajes
-    function showMessage(message, type = 'info') {
-      const messageDiv = document.getElementById('statusMessage');
-      messageDiv.className = `alert alert-${type}`;
-      messageDiv.textContent = message;
-      messageDiv.style.display = 'block';
-      
-      if (type !== 'danger') {
-        setTimeout(() => {
-          messageDiv.style.display = 'none';
-        }, 4000);
-      }
-    }
-
-    // Función para hacer peticiones autenticadas
-    async function fetchWithAuth(url, options = {}) {
-      // Si no hay authToken, usar modo localStorage
-      if (!authToken) {
-        return handleLocalStorageMode(url, options);
-      }
-
-      const headers = {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${authToken}`,
-        ...options.headers
-      };
-
-      try {
-        const response = await fetch(url, { ...options, headers });
+      // Verificar autenticación
+      function checkAuth() {
+        // Primero intentar con el método actual (localStorage simple)
+        const loggedIn = localStorage.getItem('loggedIn');
+        if (loggedIn === 'true') {
+          return true;
+        }
         
-        if (response.status === 401) {
-          // Si falla JWT, intentar localStorage
+        // Si no, intentar con JWT
+        authToken = localStorage.getItem('authToken');
+        if (authToken) {
+          return true;
+        }
+        
+        showMessage('Sesión expirada. Redirigiendo al login...', 'warning');
+        setTimeout(() => {
+          window.location.href = 'login.html';
+        }, 2000);
+        return false;
+      }
+
+      // Función para mostrar mensajes
+      function showMessage(message, type = 'info') {
+        const messageDiv = document.getElementById('statusMessage');
+        messageDiv.className = `alert alert-${type}`;
+        messageDiv.textContent = message;
+        messageDiv.style.display = 'block';
+        
+        if (type !== 'danger') {
+          setTimeout(() => {
+            messageDiv.style.display = 'none';
+          }, 4000);
+        }
+      }
+
+      // Función para hacer peticiones autenticadas
+      async function fetchWithAuth(url, options = {}) {
+        // Si no hay authToken, usar modo localStorage
+        if (!authToken) {
           return handleLocalStorageMode(url, options);
         }
-        
-        if (!response.ok) {
-          const errorData = await response.json().catch(() => ({ error: 'Error del servidor' }));
-          throw new Error(errorData.error || `Error HTTP ${response.status}`);
+
+        const headers = {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${authToken}`,
+          ...options.headers
+        };
+
+        try {
+          const response = await fetch(url, { ...options, headers });
+          
+          if (response.status === 401) {
+            // Si falla JWT, intentar localStorage
+            return handleLocalStorageMode(url, options);
+          }
+          
+          if (!response.ok) {
+            const errorData = await response.json().catch(() => ({ error: 'Error del servidor' }));
+            throw new Error(errorData.error || `Error HTTP ${response.status}`);
+          }
+          
+          return await response.json();
+        } catch (error) {
+          console.error('Error en petición:', error);
+          // Fallback a localStorage
+          return handleLocalStorageMode(url, options);
+        }
+      }
+
+      // Manejar modo localStorage (compatibilidad con sistema actual)
+      function handleLocalStorageMode(url, options) {
+        if (url.includes('/cuentas') && options.method !== 'POST') {
+          // Devolver catálogo de cuentas básico
+          return Promise.resolve([
+            { id: 1, codigo: '1001', nombre: 'Caja' },
+            { id: 2, codigo: '1002', nombre: 'Bancos' },
+            { id: 3, codigo: '1003', nombre: 'Clientes' },
+            { id: 4, codigo: '1004', nombre: 'Inventarios' },
+            { id: 5, codigo: '1005', nombre: 'Equipo de oficina' },
+            { id: 6, codigo: '2001', nombre: 'Proveedores' },
+            { id: 7, codigo: '2002', nombre: 'Acreedores diversos' },
+            { id: 8, codigo: '3001', nombre: 'Capital social' },
+            { id: 9, codigo: '4001', nombre: 'Ventas' },
+            { id: 10, codigo: '5001', nombre: 'Compras' },
+            { id: 11, codigo: '5002', nombre: 'Gastos de venta' },
+            { id: 12, codigo: '5003', nombre: 'Gastos de administración' }
+          ]);
         }
         
-        return await response.json();
-      } catch (error) {
-        console.error('Error en petición:', error);
-        // Fallback a localStorage
-        return handleLocalStorageMode(url, options);
+        if (url.includes('/movimientos') && options.method === 'POST') {
+          // Guardar movimiento en localStorage (modo compatibilidad)
+          return saveMovimientoToLocalStorage(JSON.parse(options.body));
+        }
+        
+        if (url.includes('/movimientos') && !options.method) {
+          // Cargar movimientos desde localStorage
+          const movimientos = JSON.parse(localStorage.getItem('movimientos')) || [];
+          return Promise.resolve(movimientos.map(mov => ({
+            id: mov.id,
+            numero_asiento: mov.asiento || mov.id,
+            fecha: mov.fecha,
+            concepto: mov.concepto,
+            referencia: mov.referencia || '',
+            totalDebe: mov.cargo || 0,
+            totalHaber: mov.abono || 0,
+            cuentas: [{ 
+              codigo: mov.cuenta?.split(' - ')[0] || '', 
+              nombre: mov.cuenta?.split(' - ')[1] || mov.cuenta || '',
+              debe: mov.cargo || 0,
+              haber: mov.abono || 0
+            }]
+          })));
+        }
+        
+        return Promise.reject(new Error('Funcionalidad no disponible sin conexión a API'));
       }
-    }
 
-    // Manejar modo localStorage (compatibilidad con sistema actual)
-    function handleLocalStorageMode(url, options) {
-      if (url.includes('/cuentas') && options.method !== 'POST') {
-        // Devolver catálogo de cuentas básico
-        return Promise.resolve([
-          { id: 1, codigo: '1001', nombre: 'Caja' },
-          { id: 2, codigo: '1002', nombre: 'Bancos' },
-          { id: 3, codigo: '1003', nombre: 'Clientes' },
-          { id: 4, codigo: '1004', nombre: 'Inventarios' },
-          { id: 5, codigo: '1005', nombre: 'Equipo de oficina' },
-          { id: 6, codigo: '2001', nombre: 'Proveedores' },
-          { id: 7, codigo: '2002', nombre: 'Acreedores diversos' },
-          { id: 8, codigo: '3001', nombre: 'Capital social' },
-          { id: 9, codigo: '4001', nombre: 'Ventas' },
-          { id: 10, codigo: '5001', nombre: 'Compras' },
-          { id: 11, codigo: '5002', nombre: 'Gastos de venta' },
-          { id: 12, codigo: '5003', nombre: 'Gastos de administración' }
-        ]);
-      }
-      
-      if (url.includes('/movimientos') && options.method === 'POST') {
-        // Guardar movimiento en localStorage (modo compatibilidad)
-        return saveMovimientoToLocalStorage(JSON.parse(options.body));
-      }
-      
-      if (url.includes('/movimientos') && !options.method) {
-        // Cargar movimientos desde localStorage
+      // Guardar movimiento en localStorage (modo compatibilidad)
+      function saveMovimientoToLocalStorage(movimientoData) {
         const movimientos = JSON.parse(localStorage.getItem('movimientos')) || [];
-        return Promise.resolve(movimientos.map(mov => ({
-          id: mov.id,
-          numero_asiento: mov.asiento || mov.id,
-          fecha: mov.fecha,
-          concepto: mov.concepto,
-          referencia: mov.referencia || '',
-          totalDebe: mov.cargo || 0,
-          totalHaber: mov.abono || 0,
-          cuentas: [{ 
-            codigo: mov.cuenta?.split(' - ')[0] || '', 
-            nombre: mov.cuenta?.split(' - ')[1] || mov.cuenta || '',
-            debe: mov.cargo || 0,
-            haber: mov.abono || 0
-          }]
-        })));
-      }
-      
-      return Promise.reject(new Error('Funcionalidad no disponible sin conexión a API'));
-    }
-
-    // Guardar movimiento en localStorage (modo compatibilidad)
-    function saveMovimientoToLocalStorage(movimientoData) {
-      const movimientos = JSON.parse(localStorage.getItem('movimientos')) || [];
-      const currentUser = JSON.parse(localStorage.getItem('currentUser')) || { nombre: 'Usuario', apellidos: 'Sistema' };
-      
-      // Convertir formato API a formato localStorage
-      let contadorMovimientos = movimientos.length + 1;
-      
-      movimientoData.cuentas.forEach((cuenta, index) => {
-        const cuentaInfo = cuentas.find(c => c.id === cuenta.cuenta_id);
-        const nuevoMovimiento = {
-          id: contadorMovimientos + index,
-          asiento: contadorMovimientos,
+        const currentUser = JSON.parse(localStorage.getItem('currentUser')) || { nombre: 'Usuario', apellidos: 'Sistema' };
+        
+        // Convertir formato API a formato localStorage
+        let contadorMovimientos = movimientos.length + 1;
+        
+        movimientoData.cuentas.forEach((cuenta, index) => {
+          const cuentaInfo = cuentas.find(c => c.id === cuenta.cuenta_id);
+          const nuevoMovimiento = {
+            id: contadorMovimientos + index,
+            asiento: contadorMovimientos,
+            fecha: movimientoData.fecha,
+            cuenta: `${cuentaInfo?.codigo} - ${cuentaInfo?.nombre}` || 'Cuenta desconocida',
+            concepto: movimientoData.concepto,
+            referencia: movimientoData.referencia,
+            cargo: cuenta.debe || 0,
+            abono: cuenta.haber || 0,
+            usuario: `${currentUser.nombre} ${currentUser.apellidos}`,
+            timestamp: new Date().toISOString()
+          };
+          
+          movimientos.push(nuevoMovimiento);
+        });
+        
+        localStorage.setItem('movimientos', JSON.stringify(movimientos));
+        
+        return Promise.resolve({
+          id: contadorMovimientos,
+          numero_asiento: contadorMovimientos,
           fecha: movimientoData.fecha,
-          cuenta: `${cuentaInfo?.codigo} - ${cuentaInfo?.nombre}` || 'Cuenta desconocida',
           concepto: movimientoData.concepto,
           referencia: movimientoData.referencia,
-          cargo: cuenta.debe || 0,
-          abono: cuenta.haber || 0,
-          usuario: `${currentUser.nombre} ${currentUser.apellidos}`,
-          timestamp: new Date().toISOString()
-        };
-        
-        movimientos.push(nuevoMovimiento);
-      });
-      
-      localStorage.setItem('movimientos', JSON.stringify(movimientos));
-      
-      return Promise.resolve({
-        id: contadorMovimientos,
-        numero_asiento: contadorMovimientos,
-        fecha: movimientoData.fecha,
-        concepto: movimientoData.concepto,
-        referencia: movimientoData.referencia,
-        cuentas: movimientoData.cuentas,
-        totalDebe: movimientoData.cuentas.reduce((sum, c) => sum + (c.debe || 0), 0),
-        totalHaber: movimientoData.cuentas.reduce((sum, c) => sum + (c.haber || 0), 0)
-      });
-    }
-
-    // Cargar catálogo de cuentas
-    async function loadCuentas() {
-      try {
-        const data = await fetchWithAuth(`${API_BASE}/cuentas`);
-        if (data) {
-          cuentas = data;
-          console.log('Cuentas cargadas:', cuentas.length);
-        }
-      } catch (error) {
-        console.error('Error cargando cuentas:', error);
-        showMessage('Error cargando catálogo de cuentas: ' + error.message, 'danger');
+          cuentas: movimientoData.cuentas,
+          totalDebe: movimientoData.cuentas.reduce((sum, c) => sum + (c.debe || 0), 0),
+          totalHaber: movimientoData.cuentas.reduce((sum, c) => sum + (c.haber || 0), 0)
+        });
       }
-    }
 
-    // Agregar nueva fila de cuenta
-    function agregarCuenta() {
-      contadorCuentas++;
-      const container = document.getElementById('cuentasContainer');
-      
-      const cuentaRow = document.createElement('div');
-      cuentaRow.className = 'cuenta-row';
-      cuentaRow.id = `cuenta-${contadorCuentas}`;
-      
-      cuentaRow.innerHTML = `
-        <div class="row align-items-center">
-          <div class="col-md-6">
-            <label class="form-label">Cuenta</label>
-            <select class="form-select cuenta-select" required onchange="updateBalance()">
-              <option value="">Seleccionar cuenta...</option>
-              ${cuentas.map(cuenta => 
-                `<option value="${cuenta.id}">${cuenta.codigo} - ${cuenta.nombre}</option>`
-              ).join('')}
-            </select>
-          </div>
-          <div class="col-md-2">
-            <label class="form-label">Debe</label>
-            <input type="number" class="form-control debe-input" step="0.01" min="0" value="0" onchange="onDebeChange(this)" oninput="updateBalance()">
-          </div>
-          <div class="col-md-2">
-            <label class="form-label">Haber</label>
-            <input type="number" class="form-control haber-input" step="0.01" min="0" value="0" onchange="onHaberChange(this)" oninput="updateBalance()">
-          </div>
-          <div class="col-md-2">
-            <label class="form-label">&nbsp;</label>
-            <button type="button" class="btn btn-danger w-100" onclick="eliminarCuenta(${contadorCuentas})">
-              Eliminar
-            </button>
-          </div>
-        </div>
-      `;
-      
-      container.appendChild(cuentaRow);
-      updateBalance();
-    }
+      // Cargar catálogo de cuentas
+      async function loadCuentas() {
+        try {
+          const data = await fetchWithAuth(`${API_BASE}/cuentas`);
+          if (data) {
+            cuentas = data;
+            console.log('Cuentas cargadas:', cuentas.length);
+          }
+        } catch (error) {
+          console.error('Error cargando cuentas:', error);
+          showMessage('Error cargando catálogo de cuentas: ' + error.message, 'danger');
+        }
+      }
 
-    // Eliminar cuenta
-    function eliminarCuenta(id) {
-      const element = document.getElementById(`cuenta-${id}`);
-      if (element) {
-        element.remove();
+      // Agregar nueva fila de cuenta
+      function agregarCuenta() {
+        contadorCuentas++;
+        const container = document.getElementById('cuentasContainer');
+        
+        const cuentaRow = document.createElement('div');
+        cuentaRow.className = 'cuenta-row';
+        cuentaRow.id = `cuenta-${contadorCuentas}`;
+        
+        cuentaRow.innerHTML = `
+          <div class="row align-items-center">
+            <div class="col-md-6">
+              <label class="form-label">Cuenta</label>
+              <select class="form-select cuenta-select" required onchange="updateBalance()">
+                <option value="">Seleccionar cuenta...</option>
+                ${cuentas.map(cuenta => 
+                  `<option value="${cuenta.id}">${cuenta.codigo} - ${cuenta.nombre}</option>`
+                ).join('')}
+              </select>
+            </div>
+            <div class="col-md-2">
+              <label class="form-label">Debe</label>
+              <input type="number" class="form-control debe-input" step="0.01" min="0" value="0" onchange="onDebeChange(this)" oninput="updateBalance()">
+            </div>
+            <div class="col-md-2">
+              <label class="form-label">Haber</label>
+              <input type="number" class="form-control haber-input" step="0.01" min="0" value="0" onchange="onHaberChange(this)" oninput="updateBalance()">
+            </div>
+            <div class="col-md-2">
+              <label class="form-label">&nbsp;</label>
+              <button type="button" class="btn btn-danger w-100" onclick="eliminarCuenta(${contadorCuentas})">
+                Eliminar
+              </button>
+            </div>
+          </div>
+        `;
+        
+        container.appendChild(cuentaRow);
         updateBalance();
       }
-    }
 
-    // Manejar cambio en debe
-    function onDebeChange(input) {
-      if (parseFloat(input.value) > 0) {
-        const haberInput = input.closest('.cuenta-row').querySelector('.haber-input');
-        haberInput.value = 0;
+      // Eliminar cuenta
+      function eliminarCuenta(id) {
+        const element = document.getElementById(`cuenta-${id}`);
+        if (element) {
+          element.remove();
+          updateBalance();
+        }
       }
-      updateBalance();
-    }
 
-    // Manejar cambio en haber
-    function onHaberChange(input) {
-      if (parseFloat(input.value) > 0) {
-        const debeInput = input.closest('.cuenta-row').querySelector('.debe-input');
-        debeInput.value = 0;
+      // Manejar cambio en debe
+      function onDebeChange(input) {
+        if (parseFloat(input.value) > 0) {
+          const haberInput = input.closest('.cuenta-row').querySelector('.haber-input');
+          haberInput.value = 0;
+        }
+        updateBalance();
       }
-      updateBalance();
-    }
 
-    // Actualizar balance
-    function updateBalance() {
-      const debeInputs = document.querySelectorAll('.debe-input');
-      const haberInputs = document.querySelectorAll('.haber-input');
-      
-      let totalDebe = 0;
-      let totalHaber = 0;
-      
-      debeInputs.forEach(input => {
-        totalDebe += parseFloat(input.value) || 0;
-      });
-      
-      haberInputs.forEach(input => {
-        totalHaber += parseFloat(input.value) || 0;
-      });
-      
-      const diferencia = totalDebe - totalHaber;
-      
-      document.getElementById('totalDebe').textContent = '
-       + totalDebe.toFixed(2);
-      document.getElementById('totalHaber').textContent = '
-       + totalHaber.toFixed(2);
-      document.getElementById('diferencia').textContent = '
-       + diferencia.toFixed(2);
-      
-      // Cambiar color según el balance
-      const diferenciaEl = document.getElementById('diferencia');
-      if (Math.abs(diferencia) < 0.01) {
-        diferenciaEl.style.color = '#28a745'; // Verde si está balanceado
-      } else {
-        diferenciaEl.style.color = '#dc3545'; // Rojo si no está balanceado
+      // Manejar cambio en haber
+      function onHaberChange(input) {
+        if (parseFloat(input.value) > 0) {
+          const debeInput = input.closest('.cuenta-row').querySelector('.debe-input');
+          debeInput.value = 0;
+        }
+        updateBalance();
       }
-    }
 
-    // Guardar movimiento
-    async function guardarMovimiento(e) {
-      e.preventDefault();
-      
-      try {
-        const saveBtn = document.getElementById('saveBtn');
-        const originalText = saveBtn.textContent;
-        saveBtn.innerHTML = '<span class="loading-spinner"></span>Guardando...';
-        saveBtn.disabled = true;
+      // CORRECCIÓN: Actualizar balance con strings seguros
+      function updateBalance() {
+        const debeInputs = document.querySelectorAll('.debe-input');
+        const haberInputs = document.querySelectorAll('.haber-input');
         
-        const fecha = document.getElementById('fecha').value;
-        const concepto = document.getElementById('concepto').value;
-        const referencia = document.getElementById('referencia').value;
+        let totalDebe = 0;
+        let totalHaber = 0;
         
-        // Validaciones básicas
-        if (!fecha || !concepto) {
-          throw new Error('Fecha y concepto son obligatorios');
+        debeInputs.forEach(input => {
+          totalDebe += parseFloat(input.value) || 0;
+        });
+        
+        haberInputs.forEach(input => {
+          totalHaber += parseFloat(input.value) || 0;
+        });
+        
+        const diferencia = totalDebe - totalHaber;
+        
+        // CORRECCIÓN: Usar concatenación de strings en lugar de template literals problemáticos
+        document.getElementById('totalDebe').textContent = '$' + totalDebe.toFixed(2);
+        document.getElementById('totalHaber').textContent = '$' + totalHaber.toFixed(2);
+        document.getElementById('diferencia').textContent = '$' + diferencia.toFixed(2);
+        
+        // Cambiar color según el balance
+        const diferenciaEl = document.getElementById('diferencia');
+        if (Math.abs(diferencia) < 0.01) {
+          diferenciaEl.style.color = '#28a745'; // Verde si está balanceado
+        } else {
+          diferenciaEl.style.color = '#dc3545'; // Rojo si no está balanceado
+        }
+      }
+
+      // Guardar movimiento
+      async function guardarMovimiento(e) {
+        e.preventDefault();
+        
+        try {
+          const saveBtn = document.getElementById('saveBtn');
+          const originalText = saveBtn.textContent;
+          saveBtn.innerHTML = '<span class="loading-spinner"></span>Guardando...';
+          saveBtn.disabled = true;
+          
+          const fecha = document.getElementById('fecha').value;
+          const concepto = document.getElementById('concepto').value;
+          const referencia = document.getElementById('referencia').value;
+          
+          // Validaciones básicas
+          if (!fecha || !concepto) {
+            throw new Error('Fecha y concepto son obligatorios');
+          }
+          
+          // Recopilar cuentas
+          const cuentasRows = document.querySelectorAll('.cuenta-row');
+          const cuentasData = [];
+          
+          cuentasRows.forEach(row => {
+            const cuentaSelect = row.querySelector('.cuenta-select');
+            const debeInput = row.querySelector('.debe-input');
+            const haberInput = row.querySelector('.haber-input');
+            
+            const cuenta_id = parseInt(cuentaSelect.value);
+            const debe = parseFloat(debeInput.value) || 0;
+            const haber = parseFloat(haberInput.value) || 0;
+            
+            if (cuenta_id && (debe > 0 || haber > 0)) {
+              cuentasData.push({ cuenta_id, debe, haber });
+            }
+          });
+          
+          // Validaciones del movimiento
+          if (cuentasData.length < 2) {
+            throw new Error('Debe incluir al menos 2 cuentas');
+          }
+          
+          const totalDebe = cuentasData.reduce((sum, c) => sum + c.debe, 0);
+          const totalHaber = cuentasData.reduce((sum, c) => sum + c.haber, 0);
+          
+          if (Math.abs(totalDebe - totalHaber) > 0.01) {
+            throw new Error('El asiento no está balanceado (Debe ≠ Haber)');
+          }
+          
+          // Enviar a la API
+          const movimientoData = {
+            fecha,
+            concepto,
+            referencia: referencia || '',
+            cuentas: cuentasData,
+            empresaId: 1 // Por defecto empresa 1
+          };
+          
+          const result = await fetchWithAuth(`${API_BASE}/movimientos`, {
+            method: 'POST',
+            body: JSON.stringify(movimientoData)
+          });
+          
+          if (result) {
+            showMessage('Movimiento guardado exitosamente', 'success');
+            
+            // Limpiar formulario
+            document.getElementById('movimientoForm').reset();
+            document.getElementById('fecha').value = new Date().toISOString().split('T')[0];
+            document.getElementById('cuentasContainer').innerHTML = '';
+            contadorCuentas = 0;
+            updateBalance();
+            
+            // Agregar dos cuentas por defecto
+            agregarCuenta();
+            agregarCuenta();
+            
+            // Recargar tabla de movimientos
+            await loadMovimientos();
+          }
+          
+        } catch (error) {
+          console.error('Error guardando movimiento:', error);
+          showMessage('Error: ' + error.message, 'danger');
+        } finally {
+          const saveBtn = document.getElementById('saveBtn');
+          saveBtn.textContent = 'Guardar Movimiento';
+          saveBtn.disabled = false;
+        }
+      }
+
+      // Cargar movimientos
+      async function loadMovimientos() {
+        try {
+          const data = await fetchWithAuth(`${API_BASE}/movimientos`);
+          if (data) {
+            movimientos = data;
+            renderMovimientos();
+          }
+        } catch (error) {
+          console.error('Error cargando movimientos:', error);
+          showMessage('Error cargando movimientos: ' + error.message, 'danger');
+        }
+      }
+
+      // Renderizar movimientos en la tabla
+      function renderMovimientos() {
+        const tbody = document.getElementById('movimientosTable');
+        tbody.innerHTML = '';
+        
+        if (movimientos.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="6" class="text-center">No hay movimientos registrados</td></tr>';
+          return;
         }
         
-        // Recopilar cuentas
-        const cuentasRows = document.querySelectorAll('.cuenta-row');
-        const cuentasData = [];
+        // Mostrar los últimos 10 movimientos
+        const movimientosRecientes = movimientos.slice(0, 10);
         
-        cuentasRows.forEach(row => {
-          const cuentaSelect = row.querySelector('.cuenta-select');
-          const debeInput = row.querySelector('.debe-input');
-          const haberInput = row.querySelector('.haber-input');
-          
-          const cuenta_id = parseInt(cuentaSelect.value);
-          const debe = parseFloat(debeInput.value) || 0;
-          const haber = parseFloat(haberInput.value) || 0;
-          
-          if (cuenta_id && (debe > 0 || haber > 0)) {
-            cuentasData.push({ cuenta_id, debe, haber });
+        movimientosRecientes.forEach((mov) => {
+          const row = document.createElement('tr');
+          row.innerHTML = `
+            <td>${mov.numero_asiento}</td>
+            <td>${new Date(mov.fecha).toLocaleDateString('es-MX')}</td>
+            <td>${mov.concepto}</td>
+            <td class="text-end">${mov.totalDebe.toFixed(2)}</td>
+            <td class="text-end">${mov.totalHaber.toFixed(2)}</td>
+            <td>
+              <button class="btn btn-sm btn-info me-2" onclick="verDetalleMovimiento(${mov.id})" title="Ver detalle">
+                Ver
+              </button>
+              <button class="btn btn-sm btn-danger" onclick="eliminarMovimiento(${mov.id})" title="Eliminar">
+                Eliminar
+              </button>
+            </td>
+          `;
+          tbody.appendChild(row);
+        });
+      }
+
+      // Ver detalle del movimiento
+      function verDetalleMovimiento(id) {
+        const movimiento = movimientos.find(m => m.id === id);
+        if (!movimiento) return;
+        
+        let detalleHtml = `
+          <strong>Asiento:</strong> ${movimiento.numero_asiento}<br>
+          <strong>Fecha:</strong> ${new Date(movimiento.fecha).toLocaleDateString('es-MX')}<br>
+          <strong>Concepto:</strong> ${movimiento.concepto}<br>
+          <strong>Referencia:</strong> ${movimiento.referencia || 'N/A'}<br><br>
+          <strong>Cuentas:</strong><br>
+        `;
+        
+        movimiento.cuentas.forEach(cuenta => {
+          detalleHtml += `- ${cuenta.codigo} - ${cuenta.nombre}: `;
+          if (cuenta.debe > 0) {
+            detalleHtml += `Debe ${cuenta.debe.toFixed(2)}<br>`;
+          } else {
+            detalleHtml += `Haber ${cuenta.haber.toFixed(2)}<br>`;
           }
         });
         
-        // Validaciones del movimiento
-        if (cuentasData.length < 2) {
-          throw new Error('Debe incluir al menos 2 cuentas');
-        }
-        
-        const totalDebe = cuentasData.reduce((sum, c) => sum + c.debe, 0);
-        const totalHaber = cuentasData.reduce((sum, c) => sum + c.haber, 0);
-        
-        if (Math.abs(totalDebe - totalHaber) > 0.01) {
-          throw new Error('El asiento no está balanceado (Debe ≠ Haber)');
-        }
-        
-        // Enviar a la API
-        const movimientoData = {
-          fecha,
-          concepto,
-          referencia: referencia || '',
-          cuentas: cuentasData,
-          empresaId: 1 // Por defecto empresa 1
-        };
-        
-        const result = await fetchWithAuth(`${API_BASE}/movimientos`, {
-          method: 'POST',
-          body: JSON.stringify(movimientoData)
-        });
-        
-        if (result) {
-          showMessage('Movimiento guardado exitosamente', 'success');
-          
-          // Limpiar formulario
-          document.getElementById('movimientoForm').reset();
-          document.getElementById('fecha').value = new Date().toISOString().split('T')[0];
-          document.getElementById('cuentasContainer').innerHTML = '';
-          contadorCuentas = 0;
-          updateBalance();
-          
-          // Agregar dos cuentas por defecto
-          agregarCuenta();
-          agregarCuenta();
-          
-          // Recargar tabla de movimientos
-          await loadMovimientos();
-        }
-        
-      } catch (error) {
-        console.error('Error guardando movimiento:', error);
-        showMessage('Error: ' + error.message, 'danger');
-      } finally {
-        const saveBtn = document.getElementById('saveBtn');
-        saveBtn.textContent = 'Guardar Movimiento';
-        saveBtn.disabled = false;
-      }
-    }
-
-    // Cargar movimientos
-    async function loadMovimientos() {
-      try {
-        const data = await fetchWithAuth(`${API_BASE}/movimientos`);
-        if (data) {
-          movimientos = data;
-          renderMovimientos();
-        }
-      } catch (error) {
-        console.error('Error cargando movimientos:', error);
-        showMessage('Error cargando movimientos: ' + error.message, 'danger');
-      }
-    }
-
-    // Renderizar movimientos en la tabla
-    function renderMovimientos() {
-      const tbody = document.getElementById('movimientosTable');
-      tbody.innerHTML = '';
-      
-      if (movimientos.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="6" class="text-center">No hay movimientos registrados</td></tr>';
-        return;
-      }
-      
-      // Mostrar los últimos 10 movimientos
-      const movimientosRecientes = movimientos.slice(0, 10);
-      
-      movimientosRecientes.forEach((mov) => {
-        const row = document.createElement('tr');
-        row.innerHTML = `
-          <td>${mov.numero_asiento}</td>
-          <td>${new Date(mov.fecha).toLocaleDateString('es-MX')}</td>
-          <td>${mov.concepto}</td>
-          <td class="text-end">${mov.totalDebe.toFixed(2)}</td>
-          <td class="text-end">${mov.totalHaber.toFixed(2)}</td>
-          <td>
-            <button class="btn btn-sm btn-info me-2" onclick="verDetalleMovimiento(${mov.id})" title="Ver detalle">
-              Ver
-            </button>
-            <button class="btn btn-sm btn-danger" onclick="eliminarMovimiento(${mov.id})" title="Eliminar">
-              Eliminar
-            </button>
-          </td>
-        `;
-        tbody.appendChild(row);
-      });
-    }
-
-    // Ver detalle del movimiento
-    function verDetalleMovimiento(id) {
-      const movimiento = movimientos.find(m => m.id === id);
-      if (!movimiento) return;
-      
-      let detalleHtml = `
-        <strong>Asiento:</strong> ${movimiento.numero_asiento}<br>
-        <strong>Fecha:</strong> ${new Date(movimiento.fecha).toLocaleDateString('es-MX')}<br>
-        <strong>Concepto:</strong> ${movimiento.concepto}<br>
-        <strong>Referencia:</strong> ${movimiento.referencia || 'N/A'}<br><br>
-        <strong>Cuentas:</strong><br>
-      `;
-      
-      movimiento.cuentas.forEach(cuenta => {
-        detalleHtml += `- ${cuenta.codigo} - ${cuenta.nombre}: `;
-        if (cuenta.debe > 0) {
-          detalleHtml += `Debe ${cuenta.debe.toFixed(2)}<br>`;
-        } else {
-          detalleHtml += `Haber ${cuenta.haber.toFixed(2)}<br>`;
-        }
-      });
-      
-      const modal = document.createElement('div');
-      modal.innerHTML = `
-        <div class="modal fade show" style="display: block; background: rgba(0,0,0,0.5);" onclick="this.remove()">
-          <div class="modal-dialog">
-            <div class="modal-content">
-              <div class="modal-header">
-                <h5 class="modal-title">Detalle del Movimiento</h5>
-                <button type="button" class="btn-close" onclick="this.closest('.modal').remove()"></button>
-              </div>
-              <div class="modal-body">
-                ${detalleHtml}
-              </div>
-              <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" onclick="this.closest('.modal').remove()">Cerrar</button>
+        const modal = document.createElement('div');
+        modal.innerHTML = `
+          <div class="modal fade show" style="display: block; background: rgba(0,0,0,0.5);" onclick="this.remove()">
+            <div class="modal-dialog">
+              <div class="modal-content">
+                <div class="modal-header">
+                  <h5 class="modal-title">Detalle del Movimiento</h5>
+                  <button type="button" class="btn-close" onclick="this.closest('.modal').remove()"></button>
+                </div>
+                <div class="modal-body">
+                  ${detalleHtml}
+                </div>
+                <div class="modal-footer">
+                  <button type="button" class="btn btn-secondary" onclick="this.closest('.modal').remove()">Cerrar</button>
+                </div>
               </div>
             </div>
           </div>
-        </div>
-      `;
-      
-      document.body.appendChild(modal);
-    }
-
-    // Eliminar movimiento
-    async function eliminarMovimiento(id) {
-      if (!confirm('¿Está seguro de eliminar este movimiento?')) return;
-      
-      try {
-        await fetchWithAuth(`${API_BASE}/movimientos/${id}`, {
-          method: 'DELETE'
-        });
+        `;
         
-        showMessage('Movimiento eliminado correctamente', 'success');
-        await loadMovimientos();
-      } catch (error) {
-        console.error('Error eliminando movimiento:', error);
-        showMessage('Error eliminando movimiento: ' + error.message, 'danger');
+        document.body.appendChild(modal);
       }
-    }
 
-    // Inicialización
-    document.addEventListener('DOMContentLoaded', async function() {
-      if (!checkAuth()) return;
+      // Eliminar movimiento
+      async function eliminarMovimiento(id) {
+        if (!confirm('¿Está seguro de eliminar este movimiento?')) return;
+        
+        try {
+          await fetchWithAuth(`${API_BASE}/movimientos/${id}`, {
+            method: 'DELETE'
+          });
+          
+          showMessage('Movimiento eliminado correctamente', 'success');
+          await loadMovimientos();
+        } catch (error) {
+          console.error('Error eliminando movimiento:', error);
+          showMessage('Error eliminando movimiento: ' + error.message, 'danger');
+        }
+      }
 
-      // Establecer fecha actual por defecto
-      document.getElementById('fecha').value = new Date().toISOString().split('T')[0];
-      
-      // Event listeners
-      document.getElementById('movimientoForm').addEventListener('submit', guardarMovimiento);
-      
-      // Cargar datos
-      await loadCuentas();
-      await loadMovimientos();
-      
-      // Agregar dos cuentas por defecto
-      agregarCuenta();
-      agregarCuenta();
-    });
+      // Inicialización
+      document.addEventListener('DOMContentLoaded', async function() {
+        if (!checkAuth()) return;
 
-    // Exponer funciones globalmente para onclick
-    window.agregarCuenta = agregarCuenta;
-    window.eliminarCuenta = eliminarCuenta;
-    window.onDebeChange = onDebeChange;
-    window.onHaberChange = onHaberChange;
-    window.verDetalleMovimiento = verDetalleMovimiento;
-    window.eliminarMovimiento = eliminarMovimiento;
+        // Establecer fecha actual por defecto
+        document.getElementById('fecha').value = new Date().toISOString().split('T')[0];
+        
+        // Event listeners
+        document.getElementById('movimientoForm').addEventListener('submit', guardarMovimiento);
+        
+        // Cargar datos
+        await loadCuentas();
+        await loadMovimientos();
+        
+        // Agregar dos cuentas por defecto
+        agregarCuenta();
+        agregarCuenta();
+      });
+
+      // Exponer funciones globalmente para onclick
+      window.agregarCuenta = agregarCuenta;
+      window.eliminarCuenta = eliminarCuenta;
+      window.onDebeChange = onDebeChange;
+      window.onHaberChange = onHaberChange;
+      window.verDetalleMovimiento = verDetalleMovimiento;
+      window.eliminarMovimiento = eliminarMovimiento;
   </script>
 </body>
 </html>
