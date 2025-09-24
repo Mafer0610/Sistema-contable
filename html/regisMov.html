@@ -45,6 +45,20 @@
       font-weight: 600;
       margin-bottom: 8px;
     }
+    .btn-add-cuenta {
+      background: rgba(228, 165, 232, 0.8);
+      color: #6b46a3;
+      border: 2px solid #6b46a3;
+      border-radius: 10px;
+      padding: 8px 15px;
+      font-weight: 600;
+      transition: all 0.3s ease;
+      font-size: 0.9rem;
+    }
+    .btn-add-cuenta:hover {
+      background: #6b46a3;
+      color: white;
+    }
     .btn-save {
       background: linear-gradient(135deg, #6b46a3, #8e7cc3);
       border: none;
@@ -59,6 +73,11 @@
       background: linear-gradient(135deg, #5a3a8a, #7a6bb0);
       transform: translateY(-2px);
       box-shadow: 0 5px 15px rgba(107, 70, 163, 0.4);
+    }
+    .btn-save:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+      transform: none;
     }
     .btn-back {
       background: rgba(228, 165, 232, 0.8);
@@ -76,6 +95,31 @@
       background: #6b46a3;
       color: white;
       text-decoration: none;
+    }
+    .cuentas-container {
+      background: rgba(228, 165, 232, 0.1);
+      border-radius: 15px;
+      padding: 20px;
+      margin: 20px 0;
+    }
+    .cuenta-row {
+      background: white;
+      border-radius: 10px;
+      padding: 15px;
+      margin-bottom: 15px;
+      border: 2px solid #e4a5e8;
+    }
+    .balance-info {
+      background: rgba(107, 70, 163, 0.1);
+      border-radius: 10px;
+      padding: 15px;
+      margin: 20px 0;
+      text-align: center;
+    }
+    .balance-amount {
+      font-size: 1.2rem;
+      font-weight: bold;
+      color: #6b46a3;
     }
     .table-container {
       background: rgba(255, 255, 255, 0.8);
@@ -115,6 +159,19 @@
     .btn-danger:hover {
       background: #c82333;
     }
+    .loading-spinner {
+      display: inline-block;
+      width: 16px;
+      height: 16px;
+      border: 2px solid rgba(255,255,255,.3);
+      border-radius: 50%;
+      border-top-color: #fff;
+      animation: spin 1s ease-in-out infinite;
+      margin-right: 8px;
+    }
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
   </style>
 </head>
 <body>
@@ -128,61 +185,48 @@
     
     <form id="movimientoForm">
       <div class="row">
-        <div class="col-md-4">
+        <div class="col-md-3">
           <div class="mb-3">
             <label for="fecha" class="form-label">Fecha</label>
             <input type="date" id="fecha" class="form-control" required>
           </div>
         </div>
-        <div class="col-md-4">
+        <div class="col-md-6">
           <div class="mb-3">
-            <label for="cuenta" class="form-label">Cuenta</label>
-            <select id="cuenta" class="form-select" required>
-              <option value="">Seleccionar cuenta...</option>
-              <option value="1001 - Caja">1001 - Caja</option>
-              <option value="1002 - Bancos">1002 - Bancos</option>
-              <option value="1003 - Clientes">1003 - Clientes</option>
-              <option value="1004 - Inventarios">1004 - Inventarios</option>
-              <option value="1005 - Equipo de oficina">1005 - Equipo de oficina</option>
-              <option value="2001 - Proveedores">2001 - Proveedores</option>
-              <option value="2002 - Acreedores diversos">2002 - Acreedores diversos</option>
-              <option value="3001 - Capital social">3001 - Capital social</option>
-              <option value="4001 - Ventas">4001 - Ventas</option>
-              <option value="5001 - Compras">5001 - Compras</option>
-              <option value="5002 - Gastos de venta">5002 - Gastos de venta</option>
-              <option value="5003 - Gastos de administración">5003 - Gastos de administración</option>
-            </select>
+            <label for="concepto" class="form-label">Concepto</label>
+            <input type="text" id="concepto" class="form-control" placeholder="Descripción del movimiento" required>
           </div>
         </div>
-        <div class="col-md-4">
+        <div class="col-md-3">
           <div class="mb-3">
             <label for="referencia" class="form-label">Referencia</label>
             <input type="text" id="referencia" class="form-control" placeholder="Factura, recibo, etc.">
           </div>
         </div>
       </div>
-      
-      <div class="mb-3">
-        <label for="concepto" class="form-label">Concepto</label>
-        <input type="text" id="concepto" class="form-control" placeholder="Descripción del movimiento" required>
-      </div>
 
-      <div class="row">
-        <div class="col-md-6">
-          <div class="mb-3">
-            <label for="cargo" class="form-label">Cargo (Debe)</label>
-            <input type="number" id="cargo" class="form-control" step="0.01" min="0" value="0">
-          </div>
+      <div class="cuentas-container">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+          <h5 class="mb-0">Cuentas del Movimiento</h5>
+          <button type="button" class="btn-add-cuenta" onclick="agregarCuenta()">
+            + Agregar Cuenta
+          </button>
         </div>
-        <div class="col-md-6">
-          <div class="mb-3">
-            <label for="abono" class="form-label">Abono (Haber)</label>
-            <input type="number" id="abono" class="form-control" step="0.01" min="0" value="0">
-          </div>
+        
+        <div id="cuentasContainer">
+          <!-- Las cuentas se agregan dinámicamente aquí -->
+        </div>
+        
+        <div class="balance-info" id="balanceInfo">
+          <div>Total Debe: <span id="totalDebe" class="balance-amount">$0.00</span></div>
+          <div>Total Haber: <span id="totalHaber" class="balance-amount">$0.00</span></div>
+          <div>Diferencia: <span id="diferencia" class="balance-amount">$0.00</span></div>
         </div>
       </div>
       
-      <button type="submit" class="btn btn-save w-100">Guardar Movimiento</button>
+      <button type="submit" class="btn btn-save w-100" id="saveBtn">
+        Guardar Movimiento
+      </button>
     </form>
 
     <h2 class="section-title">Movimientos Registrados</h2>
@@ -191,18 +235,17 @@
         <table class="table">
           <thead>
             <tr>
-              <th>#</th>
+              <th>Asiento</th>
               <th>Fecha</th>
-              <th>Cuenta</th>
               <th>Concepto</th>
-              <th>Cargo</th>
-              <th>Abono</th>
+              <th>Total Debe</th>
+              <th>Total Haber</th>
               <th>Acciones</th>
             </tr>
           </thead>
           <tbody id="movimientosTable">
             <tr>
-              <td colspan="7" class="text-center">No hay movimientos registrados</td>
+              <td colspan="6" class="text-center">Cargando movimientos...</td>
             </tr>
           </tbody>
         </table>
@@ -211,53 +254,35 @@
   </div>
 
   <script>
-    // Verificar autenticación simple
-    function checkAuth() {
-      const loggedIn = localStorage.getItem('loggedIn');
-      if (loggedIn !== 'true') {
-        window.location.href = 'login.html';
-        return false;
-      }
-      return true;
-    }
-
-    // Verificar auth al cargar
-    if (!checkAuth()) {
-      // Salir si no está autenticado
-    }
-
+    // Configuración de la API
+    const API_BASE = window.location.origin + '/api';
+    
     // Variables globales
-    let movimientos = JSON.parse(localStorage.getItem('movimientos')) || [];
-    let contadorMovimientos = movimientos.length;
+    let cuentas = [];
+    let movimientos = [];
+    let contadorCuentas = 0;
+    let authToken = null;
 
-    // Inicializar página
-    document.addEventListener('DOMContentLoaded', function() {
-      // Establecer fecha actual por defecto
-      const today = new Date();
-      document.getElementById('fecha').value = today.toISOString().split('T')[0];
+    // Verificar autenticación
+    function checkAuth() {
+      // Primero intentar con el método actual (localStorage simple)
+      const loggedIn = localStorage.getItem('loggedIn');
+      if (loggedIn === 'true') {
+        return true;
+      }
       
-      // Event listeners
-      document.getElementById('movimientoForm').addEventListener('submit', guardarMovimiento);
+      // Si no, intentar con JWT
+      authToken = localStorage.getItem('authToken');
+      if (authToken) {
+        return true;
+      }
       
-      // Validar que solo se llene cargo o abono
-      const cargoInput = document.getElementById('cargo');
-      const abonoInput = document.getElementById('abono');
-      
-      cargoInput.addEventListener('input', function() {
-        if (parseFloat(this.value) > 0) {
-          abonoInput.value = 0;
-        }
-      });
-      
-      abonoInput.addEventListener('input', function() {
-        if (parseFloat(this.value) > 0) {
-          cargoInput.value = 0;
-        }
-      });
-      
-      // Cargar movimientos
-      renderMovimientos();
-    });
+      showMessage('Sesión expirada. Redirigiendo al login...', 'warning');
+      setTimeout(() => {
+        window.location.href = 'login.html';
+      }, 2000);
+      return false;
+    }
 
     // Función para mostrar mensajes
     function showMessage(message, type = 'info') {
@@ -266,76 +291,353 @@
       messageDiv.textContent = message;
       messageDiv.style.display = 'block';
       
-      setTimeout(() => {
-        messageDiv.style.display = 'none';
-      }, 4000);
+      if (type !== 'danger') {
+        setTimeout(() => {
+          messageDiv.style.display = 'none';
+        }, 4000);
+      }
     }
 
-    // Guardar movimiento
-    function guardarMovimiento(e) {
-      e.preventDefault();
-      
+    // Función para hacer peticiones autenticadas
+    async function fetchWithAuth(url, options = {}) {
+      // Si no hay authToken, usar modo localStorage
+      if (!authToken) {
+        return handleLocalStorageMode(url, options);
+      }
+
+      const headers = {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${authToken}`,
+        ...options.headers
+      };
+
       try {
-        const fecha = document.getElementById('fecha').value;
-        const cuenta = document.getElementById('cuenta').value;
-        const concepto = document.getElementById('concepto').value;
-        const referencia = document.getElementById('referencia').value;
-        const cargo = parseFloat(document.getElementById('cargo').value) || 0;
-        const abono = parseFloat(document.getElementById('abono').value) || 0;
+        const response = await fetch(url, { ...options, headers });
         
-        // Validaciones
-        if (!fecha || !cuenta || !concepto) {
-          showMessage('Por favor complete todos los campos obligatorios', 'danger');
-          return;
+        if (response.status === 401) {
+          // Si falla JWT, intentar localStorage
+          return handleLocalStorageMode(url, options);
         }
         
-        if (cargo === 0 && abono === 0) {
-          showMessage('Debe ingresar un valor en Cargo o Abono', 'warning');
-          return;
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({ error: 'Error del servidor' }));
+          throw new Error(errorData.error || `Error HTTP ${response.status}`);
         }
         
-        if (cargo > 0 && abono > 0) {
-          showMessage('Solo puede ingresar un valor en Cargo O Abono, no ambos', 'warning');
-          return;
-        }
-        
-        // Obtener datos del usuario
-        const currentUser = JSON.parse(localStorage.getItem('currentUser')) || { nombre: 'Usuario', apellidos: 'Desconocido' };
-        
-        contadorMovimientos++;
-        
+        return await response.json();
+      } catch (error) {
+        console.error('Error en petición:', error);
+        // Fallback a localStorage
+        return handleLocalStorageMode(url, options);
+      }
+    }
+
+    // Manejar modo localStorage (compatibilidad con sistema actual)
+    function handleLocalStorageMode(url, options) {
+      if (url.includes('/cuentas') && options.method !== 'POST') {
+        // Devolver catálogo de cuentas básico
+        return Promise.resolve([
+          { id: 1, codigo: '1001', nombre: 'Caja' },
+          { id: 2, codigo: '1002', nombre: 'Bancos' },
+          { id: 3, codigo: '1003', nombre: 'Clientes' },
+          { id: 4, codigo: '1004', nombre: 'Inventarios' },
+          { id: 5, codigo: '1005', nombre: 'Equipo de oficina' },
+          { id: 6, codigo: '2001', nombre: 'Proveedores' },
+          { id: 7, codigo: '2002', nombre: 'Acreedores diversos' },
+          { id: 8, codigo: '3001', nombre: 'Capital social' },
+          { id: 9, codigo: '4001', nombre: 'Ventas' },
+          { id: 10, codigo: '5001', nombre: 'Compras' },
+          { id: 11, codigo: '5002', nombre: 'Gastos de venta' },
+          { id: 12, codigo: '5003', nombre: 'Gastos de administración' }
+        ]);
+      }
+      
+      if (url.includes('/movimientos') && options.method === 'POST') {
+        // Guardar movimiento en localStorage (modo compatibilidad)
+        return saveMovimientoToLocalStorage(JSON.parse(options.body));
+      }
+      
+      if (url.includes('/movimientos') && !options.method) {
+        // Cargar movimientos desde localStorage
+        const movimientos = JSON.parse(localStorage.getItem('movimientos')) || [];
+        return Promise.resolve(movimientos.map(mov => ({
+          id: mov.id,
+          numero_asiento: mov.asiento || mov.id,
+          fecha: mov.fecha,
+          concepto: mov.concepto,
+          referencia: mov.referencia || '',
+          totalDebe: mov.cargo || 0,
+          totalHaber: mov.abono || 0,
+          cuentas: [{ 
+            codigo: mov.cuenta?.split(' - ')[0] || '', 
+            nombre: mov.cuenta?.split(' - ')[1] || mov.cuenta || '',
+            debe: mov.cargo || 0,
+            haber: mov.abono || 0
+          }]
+        })));
+      }
+      
+      return Promise.reject(new Error('Funcionalidad no disponible sin conexión a API'));
+    }
+
+    // Guardar movimiento en localStorage (modo compatibilidad)
+    function saveMovimientoToLocalStorage(movimientoData) {
+      const movimientos = JSON.parse(localStorage.getItem('movimientos')) || [];
+      const currentUser = JSON.parse(localStorage.getItem('currentUser')) || { nombre: 'Usuario', apellidos: 'Sistema' };
+      
+      // Convertir formato API a formato localStorage
+      let contadorMovimientos = movimientos.length + 1;
+      
+      movimientoData.cuentas.forEach((cuenta, index) => {
+        const cuentaInfo = cuentas.find(c => c.id === cuenta.cuenta_id);
         const nuevoMovimiento = {
-          id: contadorMovimientos,
+          id: contadorMovimientos + index,
           asiento: contadorMovimientos,
-          fecha,
-          cuenta,
-          concepto,
-          referencia,
-          cargo,
-          abono,
+          fecha: movimientoData.fecha,
+          cuenta: `${cuentaInfo?.codigo} - ${cuentaInfo?.nombre}` || 'Cuenta desconocida',
+          concepto: movimientoData.concepto,
+          referencia: movimientoData.referencia,
+          cargo: cuenta.debe || 0,
+          abono: cuenta.haber || 0,
           usuario: `${currentUser.nombre} ${currentUser.apellidos}`,
           timestamp: new Date().toISOString()
         };
         
-        // Guardar en array
         movimientos.push(nuevoMovimiento);
+      });
+      
+      localStorage.setItem('movimientos', JSON.stringify(movimientos));
+      
+      return Promise.resolve({
+        id: contadorMovimientos,
+        numero_asiento: contadorMovimientos,
+        fecha: movimientoData.fecha,
+        concepto: movimientoData.concepto,
+        referencia: movimientoData.referencia,
+        cuentas: movimientoData.cuentas,
+        totalDebe: movimientoData.cuentas.reduce((sum, c) => sum + (c.debe || 0), 0),
+        totalHaber: movimientoData.cuentas.reduce((sum, c) => sum + (c.haber || 0), 0)
+      });
+    }
+
+    // Cargar catálogo de cuentas
+    async function loadCuentas() {
+      try {
+        const data = await fetchWithAuth(`${API_BASE}/cuentas`);
+        if (data) {
+          cuentas = data;
+          console.log('Cuentas cargadas:', cuentas.length);
+        }
+      } catch (error) {
+        console.error('Error cargando cuentas:', error);
+        showMessage('Error cargando catálogo de cuentas: ' + error.message, 'danger');
+      }
+    }
+
+    // Agregar nueva fila de cuenta
+    function agregarCuenta() {
+      contadorCuentas++;
+      const container = document.getElementById('cuentasContainer');
+      
+      const cuentaRow = document.createElement('div');
+      cuentaRow.className = 'cuenta-row';
+      cuentaRow.id = `cuenta-${contadorCuentas}`;
+      
+      cuentaRow.innerHTML = `
+        <div class="row align-items-center">
+          <div class="col-md-6">
+            <label class="form-label">Cuenta</label>
+            <select class="form-select cuenta-select" required onchange="updateBalance()">
+              <option value="">Seleccionar cuenta...</option>
+              ${cuentas.map(cuenta => 
+                `<option value="${cuenta.id}">${cuenta.codigo} - ${cuenta.nombre}</option>`
+              ).join('')}
+            </select>
+          </div>
+          <div class="col-md-2">
+            <label class="form-label">Debe</label>
+            <input type="number" class="form-control debe-input" step="0.01" min="0" value="0" onchange="onDebeChange(this)" oninput="updateBalance()">
+          </div>
+          <div class="col-md-2">
+            <label class="form-label">Haber</label>
+            <input type="number" class="form-control haber-input" step="0.01" min="0" value="0" onchange="onHaberChange(this)" oninput="updateBalance()">
+          </div>
+          <div class="col-md-2">
+            <label class="form-label">&nbsp;</label>
+            <button type="button" class="btn btn-danger w-100" onclick="eliminarCuenta(${contadorCuentas})">
+              Eliminar
+            </button>
+          </div>
+        </div>
+      `;
+      
+      container.appendChild(cuentaRow);
+      updateBalance();
+    }
+
+    // Eliminar cuenta
+    function eliminarCuenta(id) {
+      const element = document.getElementById(`cuenta-${id}`);
+      if (element) {
+        element.remove();
+        updateBalance();
+      }
+    }
+
+    // Manejar cambio en debe
+    function onDebeChange(input) {
+      if (parseFloat(input.value) > 0) {
+        const haberInput = input.closest('.cuenta-row').querySelector('.haber-input');
+        haberInput.value = 0;
+      }
+      updateBalance();
+    }
+
+    // Manejar cambio en haber
+    function onHaberChange(input) {
+      if (parseFloat(input.value) > 0) {
+        const debeInput = input.closest('.cuenta-row').querySelector('.debe-input');
+        debeInput.value = 0;
+      }
+      updateBalance();
+    }
+
+    // Actualizar balance
+    function updateBalance() {
+      const debeInputs = document.querySelectorAll('.debe-input');
+      const haberInputs = document.querySelectorAll('.haber-input');
+      
+      let totalDebe = 0;
+      let totalHaber = 0;
+      
+      debeInputs.forEach(input => {
+        totalDebe += parseFloat(input.value) || 0;
+      });
+      
+      haberInputs.forEach(input => {
+        totalHaber += parseFloat(input.value) || 0;
+      });
+      
+      const diferencia = totalDebe - totalHaber;
+      
+      document.getElementById('totalDebe').textContent = '
+       + totalDebe.toFixed(2);
+      document.getElementById('totalHaber').textContent = '
+       + totalHaber.toFixed(2);
+      document.getElementById('diferencia').textContent = '
+       + diferencia.toFixed(2);
+      
+      // Cambiar color según el balance
+      const diferenciaEl = document.getElementById('diferencia');
+      if (Math.abs(diferencia) < 0.01) {
+        diferenciaEl.style.color = '#28a745'; // Verde si está balanceado
+      } else {
+        diferenciaEl.style.color = '#dc3545'; // Rojo si no está balanceado
+      }
+    }
+
+    // Guardar movimiento
+    async function guardarMovimiento(e) {
+      e.preventDefault();
+      
+      try {
+        const saveBtn = document.getElementById('saveBtn');
+        const originalText = saveBtn.textContent;
+        saveBtn.innerHTML = '<span class="loading-spinner"></span>Guardando...';
+        saveBtn.disabled = true;
         
-        // Guardar en localStorage
-        localStorage.setItem('movimientos', JSON.stringify(movimientos));
+        const fecha = document.getElementById('fecha').value;
+        const concepto = document.getElementById('concepto').value;
+        const referencia = document.getElementById('referencia').value;
         
-        // Mostrar mensaje de éxito
-        showMessage('Movimiento guardado exitosamente', 'success');
+        // Validaciones básicas
+        if (!fecha || !concepto) {
+          throw new Error('Fecha y concepto son obligatorios');
+        }
         
-        // Limpiar formulario
-        document.getElementById('movimientoForm').reset();
-        document.getElementById('fecha').value = new Date().toISOString().split('T')[0];
+        // Recopilar cuentas
+        const cuentasRows = document.querySelectorAll('.cuenta-row');
+        const cuentasData = [];
         
-        // Actualizar tabla
-        renderMovimientos();
+        cuentasRows.forEach(row => {
+          const cuentaSelect = row.querySelector('.cuenta-select');
+          const debeInput = row.querySelector('.debe-input');
+          const haberInput = row.querySelector('.haber-input');
+          
+          const cuenta_id = parseInt(cuentaSelect.value);
+          const debe = parseFloat(debeInput.value) || 0;
+          const haber = parseFloat(haberInput.value) || 0;
+          
+          if (cuenta_id && (debe > 0 || haber > 0)) {
+            cuentasData.push({ cuenta_id, debe, haber });
+          }
+        });
+        
+        // Validaciones del movimiento
+        if (cuentasData.length < 2) {
+          throw new Error('Debe incluir al menos 2 cuentas');
+        }
+        
+        const totalDebe = cuentasData.reduce((sum, c) => sum + c.debe, 0);
+        const totalHaber = cuentasData.reduce((sum, c) => sum + c.haber, 0);
+        
+        if (Math.abs(totalDebe - totalHaber) > 0.01) {
+          throw new Error('El asiento no está balanceado (Debe ≠ Haber)');
+        }
+        
+        // Enviar a la API
+        const movimientoData = {
+          fecha,
+          concepto,
+          referencia: referencia || '',
+          cuentas: cuentasData,
+          empresaId: 1 // Por defecto empresa 1
+        };
+        
+        const result = await fetchWithAuth(`${API_BASE}/movimientos`, {
+          method: 'POST',
+          body: JSON.stringify(movimientoData)
+        });
+        
+        if (result) {
+          showMessage('Movimiento guardado exitosamente', 'success');
+          
+          // Limpiar formulario
+          document.getElementById('movimientoForm').reset();
+          document.getElementById('fecha').value = new Date().toISOString().split('T')[0];
+          document.getElementById('cuentasContainer').innerHTML = '';
+          contadorCuentas = 0;
+          updateBalance();
+          
+          // Agregar dos cuentas por defecto
+          agregarCuenta();
+          agregarCuenta();
+          
+          // Recargar tabla de movimientos
+          await loadMovimientos();
+        }
         
       } catch (error) {
         console.error('Error guardando movimiento:', error);
-        showMessage('Error guardando el movimiento', 'danger');
+        showMessage('Error: ' + error.message, 'danger');
+      } finally {
+        const saveBtn = document.getElementById('saveBtn');
+        saveBtn.textContent = 'Guardar Movimiento';
+        saveBtn.disabled = false;
+      }
+    }
+
+    // Cargar movimientos
+    async function loadMovimientos() {
+      try {
+        const data = await fetchWithAuth(`${API_BASE}/movimientos`);
+        if (data) {
+          movimientos = data;
+          renderMovimientos();
+        }
+      } catch (error) {
+        console.error('Error cargando movimientos:', error);
+        showMessage('Error cargando movimientos: ' + error.message, 'danger');
       }
     }
 
@@ -345,24 +647,26 @@
       tbody.innerHTML = '';
       
       if (movimientos.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="7" class="text-center">No hay movimientos registrados</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="6" class="text-center">No hay movimientos registrados</td></tr>';
         return;
       }
       
       // Mostrar los últimos 10 movimientos
-      const movimientosRecientes = movimientos.slice(-10).reverse();
+      const movimientosRecientes = movimientos.slice(0, 10);
       
       movimientosRecientes.forEach((mov) => {
         const row = document.createElement('tr');
         row.innerHTML = `
-          <td>${mov.asiento}</td>
-          <td>${mov.fecha}</td>
-          <td>${mov.cuenta}</td>
+          <td>${mov.numero_asiento}</td>
+          <td>${new Date(mov.fecha).toLocaleDateString('es-MX')}</td>
           <td>${mov.concepto}</td>
-          <td class="text-end">${mov.cargo > 0 ? '$' + mov.cargo.toFixed(2) : '-'}</td>
-          <td class="text-end">${mov.abono > 0 ? '$' + mov.abono.toFixed(2) : '-'}</td>
+          <td class="text-end">${mov.totalDebe.toFixed(2)}</td>
+          <td class="text-end">${mov.totalHaber.toFixed(2)}</td>
           <td>
-            <button class="btn btn-danger btn-sm" onclick="eliminarMovimiento(${mov.id})">
+            <button class="btn btn-sm btn-info me-2" onclick="verDetalleMovimiento(${mov.id})" title="Ver detalle">
+              Ver
+            </button>
+            <button class="btn btn-sm btn-danger" onclick="eliminarMovimiento(${mov.id})" title="Eliminar">
               Eliminar
             </button>
           </td>
@@ -371,26 +675,94 @@
       });
     }
 
-    // Eliminar movimiento
-    window.eliminarMovimiento = function(id) {
-      if (confirm('¿Está seguro de eliminar este movimiento?')) {
-        movimientos = movimientos.filter(mov => mov.id !== id);
-        localStorage.setItem('movimientos', JSON.stringify(movimientos));
-        renderMovimientos();
-        showMessage('Movimiento eliminado correctamente', 'info');
-      }
-    };
-
-    // Función para exportar datos (opcional)
-    function exportarDatos() {
-      const dataStr = JSON.stringify(movimientos, null, 2);
-      const dataBlob = new Blob([dataStr], {type: 'application/json'});
-      const url = URL.createObjectURL(dataBlob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = 'movimientos_contables.json';
-      link.click();
+    // Ver detalle del movimiento
+    function verDetalleMovimiento(id) {
+      const movimiento = movimientos.find(m => m.id === id);
+      if (!movimiento) return;
+      
+      let detalleHtml = `
+        <strong>Asiento:</strong> ${movimiento.numero_asiento}<br>
+        <strong>Fecha:</strong> ${new Date(movimiento.fecha).toLocaleDateString('es-MX')}<br>
+        <strong>Concepto:</strong> ${movimiento.concepto}<br>
+        <strong>Referencia:</strong> ${movimiento.referencia || 'N/A'}<br><br>
+        <strong>Cuentas:</strong><br>
+      `;
+      
+      movimiento.cuentas.forEach(cuenta => {
+        detalleHtml += `- ${cuenta.codigo} - ${cuenta.nombre}: `;
+        if (cuenta.debe > 0) {
+          detalleHtml += `Debe ${cuenta.debe.toFixed(2)}<br>`;
+        } else {
+          detalleHtml += `Haber ${cuenta.haber.toFixed(2)}<br>`;
+        }
+      });
+      
+      const modal = document.createElement('div');
+      modal.innerHTML = `
+        <div class="modal fade show" style="display: block; background: rgba(0,0,0,0.5);" onclick="this.remove()">
+          <div class="modal-dialog">
+            <div class="modal-content">
+              <div class="modal-header">
+                <h5 class="modal-title">Detalle del Movimiento</h5>
+                <button type="button" class="btn-close" onclick="this.closest('.modal').remove()"></button>
+              </div>
+              <div class="modal-body">
+                ${detalleHtml}
+              </div>
+              <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="this.closest('.modal').remove()">Cerrar</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+      
+      document.body.appendChild(modal);
     }
+
+    // Eliminar movimiento
+    async function eliminarMovimiento(id) {
+      if (!confirm('¿Está seguro de eliminar este movimiento?')) return;
+      
+      try {
+        await fetchWithAuth(`${API_BASE}/movimientos/${id}`, {
+          method: 'DELETE'
+        });
+        
+        showMessage('Movimiento eliminado correctamente', 'success');
+        await loadMovimientos();
+      } catch (error) {
+        console.error('Error eliminando movimiento:', error);
+        showMessage('Error eliminando movimiento: ' + error.message, 'danger');
+      }
+    }
+
+    // Inicialización
+    document.addEventListener('DOMContentLoaded', async function() {
+      if (!checkAuth()) return;
+
+      // Establecer fecha actual por defecto
+      document.getElementById('fecha').value = new Date().toISOString().split('T')[0];
+      
+      // Event listeners
+      document.getElementById('movimientoForm').addEventListener('submit', guardarMovimiento);
+      
+      // Cargar datos
+      await loadCuentas();
+      await loadMovimientos();
+      
+      // Agregar dos cuentas por defecto
+      agregarCuenta();
+      agregarCuenta();
+    });
+
+    // Exponer funciones globalmente para onclick
+    window.agregarCuenta = agregarCuenta;
+    window.eliminarCuenta = eliminarCuenta;
+    window.onDebeChange = onDebeChange;
+    window.onHaberChange = onHaberChange;
+    window.verDetalleMovimiento = verDetalleMovimiento;
+    window.eliminarMovimiento = eliminarMovimiento;
   </script>
 </body>
 </html>

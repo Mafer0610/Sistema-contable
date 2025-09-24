@@ -78,6 +78,12 @@
       transform: translateY(-2px);
       box-shadow: 0 5px 15px rgba(107, 70, 163, 0.4);
     }
+    .btn-generate:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+      transform: none;
+      box-shadow: none;
+    }
     .btn-print {
       background: rgba(228, 165, 232, 0.8);
       color: #6b46a3;
@@ -154,13 +160,13 @@
       background: #e9ecef;
       border-top: 2px solid #6b46a3;
     }
-    .form-control {
+    .form-control, .form-select {
       border: 2px solid #e0e0e0;
       border-radius: 8px;
       padding: 8px 12px;
       transition: all 0.3s ease;
     }
-    .form-control:focus {
+    .form-control:focus, .form-select:focus {
       border-color: #6b46a3;
       box-shadow: 0 0 0 0.2rem rgba(107, 70, 163, 0.25);
     }
@@ -193,6 +199,24 @@
       font-weight: bold;
       color: #333;
     }
+    .alert {
+      border-radius: 10px;
+      padding: 15px;
+      margin: 15px 0;
+    }
+    .loading-spinner {
+      display: inline-block;
+      width: 20px;
+      height: 20px;
+      border: 3px solid rgba(255,255,255,.3);
+      border-radius: 50%;
+      border-top-color: #fff;
+      animation: spin 1s ease-in-out infinite;
+      margin-right: 10px;
+    }
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
     @media print {
       body { background: white; }
       .main-container { background: white; box-shadow: none; border: none; }
@@ -205,15 +229,26 @@
   <div class="main-container">
     <a href="panel.html" class="btn-back">← Volver al Panel</a>
     
+    <!-- Mensaje de estado -->
+    <div id="statusMessage" style="display: none;"></div>
+    
     <div class="controls">
       <div class="row align-items-end">
-        <div class="col-md-6">
+        <div class="col-md-4">
+          <label for="empresaSelect" class="form-label">Empresa:</label>
+          <select id="empresaSelect" class="form-select">
+            <option value="">Cargando empresas...</option>
+          </select>
+        </div>
+        <div class="col-md-4">
           <label for="fechaCorte" class="form-label">Fecha de Corte:</label>
           <input type="date" id="fechaCorte" class="form-control">
         </div>
-        <div class="col-md-6">
+        <div class="col-md-4">
           <div class="d-flex gap-2">
-            <button id="generateBtn" class="btn-generate">Generar Balance</button>
+            <button id="generateBtn" class="btn-generate">
+              Generar Balance
+            </button>
             <button id="printBtn" class="btn-print" onclick="window.print()">Imprimir</button>
           </div>
         </div>
@@ -244,7 +279,7 @@
       <table class="balance-table">
         <thead>
           <tr class="header-empresa">
-            <td colspan="4">Sky Home S.A. de C.V.</td>
+            <td colspan="4" id="empresaNombre">Sky Home S.A. de C.V.</td>
           </tr>
           <tr class="header-titulo">
             <td colspan="4">Balance General al <span id="fechaBalance">fecha</span></td>
@@ -270,101 +305,176 @@
   </div>
 
   <script>
+    // Configuración de la API
+    const API_BASE = window.location.origin + '/api';
+    
     // Variables globales
-    let movimientos = [];
+    let empresas = [];
+    let authToken = null;
 
-    // Verificar autenticación simple
+    // Verificar autenticación
     function checkAuth() {
+      // Primero intentar con el método actual (localStorage simple)
       const loggedIn = localStorage.getItem('loggedIn');
-      if (loggedIn !== 'true') {
-        window.location.href = 'login.html';
-        return false;
+      if (loggedIn === 'true') {
+        return true;
       }
-      return true;
+      
+      // Si no, intentar con JWT
+      authToken = localStorage.getItem('authToken');
+      if (authToken) {
+        return true;
+      }
+      
+      showMessage('Sesión expirada. Redirigiendo al login...', 'warning');
+      setTimeout(() => {
+        window.location.href = 'login.html';
+      }, 2000);
+      return false;
     }
 
-    // Calcular saldos por cuenta
-    function calcularSaldosPorCuenta(movimientos) {
-      const saldos = {};
+    // Función para mostrar mensajes
+    function showMessage(message, type = 'info') {
+      const messageDiv = document.getElementById('statusMessage');
+      messageDiv.className = `alert alert-${type}`;
+      messageDiv.textContent = message;
+      messageDiv.style.display = 'block';
       
-      movimientos.forEach(function(mov) {
-        if (!saldos[mov.cuenta]) {
-          saldos[mov.cuenta] = {
-            cuenta: mov.cuenta,
-            cargo: 0,
-            abono: 0,
-            saldo: 0
-          };
+      if (type !== 'danger') {
+        setTimeout(() => {
+          messageDiv.style.display = 'none';
+        }, 4000);
+      }
+    }
+
+    // Función para hacer peticiones autenticadas
+    async function fetchWithAuth(url, options = {}) {
+      // Si no hay authToken, intentar hacer la petición sin autenticación
+      if (!authToken) {
+        try {
+          const response = await fetch(url, options);
+          if (response.ok) {
+            return await response.json();
+          } else {
+            // Si falla sin auth, intentar generar datos desde localStorage
+            return generateMockDataFromLocalStorage(url);
+          }
+        } catch (error) {
+          return generateMockDataFromLocalStorage(url);
         }
-        
-        saldos[mov.cuenta].cargo += mov.cargo || 0;
-        saldos[mov.cuenta].abono += mov.abono || 0;
-      });
-      
-      // Calcular saldo final para cada cuenta
-      Object.keys(saldos).forEach(function(cuenta) {
-        saldos[cuenta].saldo = saldos[cuenta].cargo - saldos[cuenta].abono;
-      });
-      
-      return saldos;
-    }
+      }
 
-    // Organizar saldos en estructura de balance
-    function organizarBalance(saldosCuentas) {
-      const balance = {
-        activos: [],
-        pasivos: [],
-        capital: []
+      const headers = {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${authToken}`,
+        ...options.headers
       };
 
-      Object.values(saldosCuentas).forEach(function(cuenta) {
-        const nombre = cuenta.cuenta;
-        const saldo = cuenta.saldo;
+      try {
+        const response = await fetch(url, { ...options, headers });
         
-        if (saldo !== 0) {
-          // Clasificar por tipo de cuenta basado en el código
-          if (nombre.startsWith('1')) {
-            // Activos (códigos 1xxx)
+        if (response.status === 401) {
+          // Si falla JWT, intentar sin autenticación
+          try {
+            const fallbackResponse = await fetch(url, options);
+            if (fallbackResponse.ok) {
+              return await fallbackResponse.json();
+            } else {
+              return generateMockDataFromLocalStorage(url);
+            }
+          } catch {
+            return generateMockDataFromLocalStorage(url);
+          }
+        }
+        
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({ error: 'Error del servidor' }));
+          throw new Error(errorData.error || `Error HTTP ${response.status}`);
+        }
+        
+        return await response.json();
+      } catch (error) {
+        console.error('Error en petición:', error);
+        return generateMockDataFromLocalStorage(url);
+      }
+    }
+
+    // Generar datos mock desde localStorage para compatibilidad
+    function generateMockDataFromLocalStorage(url) {
+      const movimientos = JSON.parse(localStorage.getItem('movimientos')) || [];
+      
+      if (url.includes('/empresas')) {
+        return [{ id: 1, nombre: 'Sky Home S.A. de C.V.' }];
+      }
+      
+      if (url.includes('/balance-general')) {
+        return generateBalanceFromMovimientos(movimientos);
+      }
+      
+      return null;
+    }
+
+    // Generar balance desde movimientos de localStorage
+    function generateBalanceFromMovimientos(movimientos) {
+      const fechaCorte = document.getElementById('fechaCorte').value;
+      
+      // Filtrar movimientos hasta la fecha de corte
+      const movimientosFiltrados = movimientos.filter(mov => mov.fecha <= fechaCorte);
+      
+      if (movimientosFiltrados.length === 0) {
+        return { activo: { total: 0, circulante: [], fijo: [] }, pasivo: { total: 0, corto_plazo: [], largo_plazo: [] }, capital: { total: 0, cuentas: [] } };
+      }
+
+      // Calcular saldos por cuenta
+      const saldos = {};
+      movimientosFiltrados.forEach(mov => {
+        const cuenta = mov.cuenta || 'Sin clasificar';
+        if (!saldos[cuenta]) {
+          saldos[cuenta] = { debe: 0, haber: 0 };
+        }
+        saldos[cuenta].debe += mov.cargo || 0;
+        saldos[cuenta].haber += mov.abono || 0;
+      });
+
+      const balance = {
+        activo: { total: 0, circulante: [], fijo: [] },
+        pasivo: { total: 0, corto_plazo: [], largo_plazo: [] },
+        capital: { total: 0, cuentas: [] }
+      };
+
+      Object.entries(saldos).forEach(([cuenta, valores]) => {
+        const saldo = valores.debe - valores.haber;
+        
+        if (Math.abs(saldo) > 0.01) { // Solo cuentas con saldo significativo
+          const item = { codigo: cuenta, nombre: cuenta, saldo: Math.abs(saldo) };
+          
+          if (cuenta.startsWith('1') || cuenta.includes('Caja') || cuenta.includes('Bancos') || cuenta.includes('Clientes') || cuenta.includes('Inventarios')) {
+            // Activos
             if (saldo > 0) {
-              balance.activos.push({
-                nombre: nombre,
-                saldo: Math.abs(saldo)
-              });
+              balance.activo.circulante.push(item);
+              balance.activo.total += Math.abs(saldo);
             }
-          } else if (nombre.startsWith('2')) {
-            // Pasivos (códigos 2xxx)
+          } else if (cuenta.startsWith('2') || cuenta.includes('Proveedores') || cuenta.includes('Acreedores')) {
+            // Pasivos
             if (saldo < 0) {
-              balance.pasivos.push({
-                nombre: nombre,
-                saldo: Math.abs(saldo)
-              });
-            } else if (saldo > 0) {
-              balance.pasivos.push({
-                nombre: nombre + ' (Ajuste)',
-                saldo: saldo
-              });
+              balance.pasivo.corto_plazo.push(item);
+              balance.pasivo.total += Math.abs(saldo);
             }
-          } else if (nombre.startsWith('3')) {
-            // Capital (códigos 3xxx)
-            balance.capital.push({
-              nombre: nombre,
-              saldo: Math.abs(saldo)
-            });
-          } else if (nombre.startsWith('4')) {
-            // Ingresos (códigos 4xxx)
+          } else if (cuenta.startsWith('3') || cuenta.includes('Capital')) {
+            // Capital
+            balance.capital.cuentas.push(item);
+            balance.capital.total += Math.abs(saldo);
+          } else if (cuenta.startsWith('4') || cuenta.includes('Ventas') || cuenta.includes('Ingresos')) {
+            // Ingresos (van al capital)
             if (saldo < 0) {
-              balance.capital.push({
-                nombre: 'Utilidad por ' + nombre,
-                saldo: Math.abs(saldo)
-              });
+              balance.capital.cuentas.push({ ...item, nombre: 'Utilidad por ' + cuenta });
+              balance.capital.total += Math.abs(saldo);
             }
-          } else if (nombre.startsWith('5')) {
-            // Gastos (códigos 5xxx)
+          } else if (cuenta.startsWith('5') || cuenta.includes('Gastos') || cuenta.includes('Compras')) {
+            // Gastos (reducen el capital)
             if (saldo > 0) {
-              balance.capital.push({
-                nombre: 'Pérdida por ' + nombre,
-                saldo: -Math.abs(saldo)
-              });
+              balance.capital.cuentas.push({ ...item, nombre: 'Pérdida por ' + cuenta, saldo: -Math.abs(saldo) });
+              balance.capital.total -= Math.abs(saldo);
             }
           }
         }
@@ -373,9 +483,72 @@
       return balance;
     }
 
+    // Cargar empresas
+    async function loadEmpresas() {
+      try {
+        const data = await fetchWithAuth(`${API_BASE}/empresas`);
+        if (data) {
+          empresas = data;
+          const select = document.getElementById('empresaSelect');
+          select.innerHTML = '<option value="">Todas las empresas</option>';
+          
+          empresas.forEach(empresa => {
+            const option = document.createElement('option');
+            option.value = empresa.id;
+            option.textContent = empresa.nombre;
+            select.appendChild(option);
+          });
+
+          // Seleccionar la primera empresa por defecto
+          if (empresas.length > 0) {
+            select.value = empresas[0].id;
+          }
+        }
+      } catch (error) {
+        console.error('Error cargando empresas:', error);
+        showMessage('Error cargando empresas: ' + error.message, 'danger');
+      }
+    }
+
+    // Obtener balance general desde la API
+    async function getBalanceGeneral() {
+      try {
+        const empresaId = document.getElementById('empresaSelect').value;
+        const fechaCorte = document.getElementById('fechaCorte').value;
+
+        if (!fechaCorte) {
+          throw new Error('Por favor seleccione una fecha de corte');
+        }
+
+        let url = `${API_BASE}/balance-general?fechaCorte=${fechaCorte}`;
+        if (empresaId) {
+          url += `&empresaId=${empresaId}`;
+        }
+
+        const balance = await fetchWithAuth(url);
+        return balance;
+      } catch (error) {
+        throw error;
+      }
+    }
+
     // Renderizar balance en la tabla
-    function renderBalance(fechaCorte, balance) {
+    function renderBalance(balance) {
+      // Actualizar nombre de empresa
+      const empresaId = document.getElementById('empresaSelect').value;
+      let empresaNombre = 'Consolidado - Todas las Empresas';
+      
+      if (empresaId) {
+        const empresa = empresas.find(e => e.id == empresaId);
+        if (empresa) {
+          empresaNombre = empresa.nombre;
+        }
+      }
+      
+      document.getElementById('empresaNombre').textContent = empresaNombre;
+
       // Actualizar fecha en el header
+      const fechaCorte = document.getElementById('fechaCorte').value;
       const fecha = new Date(fechaCorte + 'T00:00:00');
       document.getElementById('fechaBalance').textContent = fecha.toLocaleDateString('es-MX', {
         day: 'numeric',
@@ -384,25 +557,16 @@
       });
 
       // Calcular totales
-      const totalActivos = balance.activos.reduce(function(sum, item) {
-        return sum + item.saldo;
-      }, 0);
-      
-      const totalPasivos = balance.pasivos.reduce(function(sum, item) {
-        return sum + item.saldo;
-      }, 0);
-      
-      const totalCapital = balance.capital.reduce(function(sum, item) {
-        return sum + item.saldo;
-      }, 0);
-      
+      const totalActivos = balance.activo.total || 0;
+      const totalPasivos = balance.pasivo.total || 0;
+      const totalCapital = balance.capital.total || 0;
       const totalPasivoCapital = totalPasivos + totalCapital;
 
       // Actualizar cards de resumen
-      document.getElementById('totalActivos').textContent = '$' + totalActivos.toFixed(2);
-      document.getElementById('totalPasivos').textContent = '$' + totalPasivos.toFixed(2);
-      document.getElementById('totalCapital').textContent = '$' + totalCapital.toFixed(2);
-      document.getElementById('diferencia').textContent = '$' + (totalActivos - totalPasivoCapital).toFixed(2);
+      document.getElementById('totalActivos').textContent = '$' + totalActivos.toLocaleString('es-MX', {minimumFractionDigits: 2});
+      document.getElementById('totalPasivos').textContent = '$' + totalPasivos.toLocaleString('es-MX', {minimumFractionDigits: 2});
+      document.getElementById('totalCapital').textContent = '$' + totalCapital.toLocaleString('es-MX', {minimumFractionDigits: 2});
+      document.getElementById('diferencia').textContent = '$' + (totalActivos - totalPasivoCapital).toLocaleString('es-MX', {minimumFractionDigits: 2});
       
       // Mostrar cards de resumen
       document.getElementById('summaryCards').style.display = 'grid';
@@ -411,15 +575,31 @@
       const tbody = document.getElementById('balanceBody');
       tbody.innerHTML = '';
 
+      // Preparar datos para la tabla
+      const activosData = [
+        ...balance.activo.circulante.map(item => ({...item, seccion: 'ACTIVO CIRCULANTE'})),
+        ...balance.activo.fijo.map(item => ({...item, seccion: 'ACTIVO FIJO'}))
+      ];
+
+      const pasivosData = [
+        ...balance.pasivo.corto_plazo.map(item => ({...item, seccion: 'PASIVO A CORTO PLAZO'})),
+        ...balance.pasivo.largo_plazo.map(item => ({...item, seccion: 'PASIVO A LARGO PLAZO'}))
+      ];
+
+      const capitalData = balance.capital.cuentas.map(item => ({...item, seccion: 'CAPITAL'}));
+
       // Determinar número máximo de filas
       const maxRows = Math.max(
-        balance.activos.length + 2,
-        balance.pasivos.length + balance.capital.length + 3
+        activosData.length + (balance.activo.circulante.length > 0 ? 1 : 0) + (balance.activo.fijo.length > 0 ? 1 : 0) + 1,
+        pasivosData.length + capitalData.length + (balance.pasivo.corto_plazo.length > 0 ? 1 : 0) + (balance.pasivo.largo_plazo.length > 0 ? 1 : 0) + (capitalData.length > 0 ? 1 : 0) + 2
       );
 
       let activoIndex = 0;
       let pasivoIndex = 0;
       let capitalIndex = 0;
+      let currentActivoSection = '';
+      let currentPasivoSection = '';
+      let currentCapitalSection = '';
 
       for (let i = 0; i < maxRows; i++) {
         const row = document.createElement('tr');
@@ -428,16 +608,21 @@
         let activoCell = '';
         let activoAmount = '';
         
-        if (i === 0 && balance.activos.length > 0) {
-          activoCell = 'ACTIVOS';
-          activoAmount = '';
-          row.className = 'section-title';
-        } else if (i > 0 && activoIndex < balance.activos.length) {
-          const activo = balance.activos[activoIndex];
-          activoCell = activo.nombre;
-          activoAmount = '$' + activo.saldo.toLocaleString('es-MX', { minimumFractionDigits: 2 });
-          activoIndex++;
-        } else if (i === balance.activos.length + 1 && balance.activos.length > 0) {
+        if (activoIndex < activosData.length) {
+          const activo = activosData[activoIndex];
+          
+          // Mostrar título de sección si cambió
+          if (currentActivoSection !== activo.seccion) {
+            activoCell = activo.seccion;
+            activoAmount = '';
+            currentActivoSection = activo.seccion;
+            row.className = 'section-title';
+          } else {
+            activoCell = activo.nombre;
+            activoAmount = '$' + activo.saldo.toLocaleString('es-MX', { minimumFractionDigits: 2 });
+            activoIndex++;
+          }
+        } else if (i === activosData.length + (balance.activo.circulante.length > 0 ? 1 : 0) + (balance.activo.fijo.length > 0 ? 1 : 0)) {
           activoCell = 'TOTAL ACTIVOS';
           activoAmount = '$' + totalActivos.toLocaleString('es-MX', { minimumFractionDigits: 2 });
           row.className = 'total-row';
@@ -447,28 +632,45 @@
         let pasivoCapitalCell = '';
         let pasivoCapitalAmount = '';
         
-        if (i === 0 && balance.pasivos.length > 0) {
-          pasivoCapitalCell = 'PASIVOS';
-          pasivoCapitalAmount = '';
-          row.className = 'section-title';
-        } else if (i > 0 && pasivoIndex < balance.pasivos.length) {
-          const pasivo = balance.pasivos[pasivoIndex];
-          pasivoCapitalCell = pasivo.nombre;
-          pasivoCapitalAmount = '$' + pasivo.saldo.toLocaleString('es-MX', { minimumFractionDigits: 2 });
-          pasivoIndex++;
-        } else if (i === balance.pasivos.length + 1 && balance.pasivos.length > 0) {
+        const totalPasivoItems = pasivosData.length;
+        const totalCapitalItems = capitalData.length;
+        
+        if (pasivoIndex < totalPasivoItems) {
+          const pasivo = pasivosData[pasivoIndex];
+          
+          if (currentPasivoSection !== pasivo.seccion) {
+            pasivoCapitalCell = pasivo.seccion;
+            pasivoCapitalAmount = '';
+            currentPasivoSection = pasivo.seccion;
+            row.className = 'section-title';
+          } else {
+            pasivoCapitalCell = pasivo.nombre;
+            pasivoCapitalAmount = '$' + pasivo.saldo.toLocaleString('es-MX', { minimumFractionDigits: 2 });
+            pasivoIndex++;
+          }
+        } else if (pasivoIndex === totalPasivoItems && totalPasivos > 0) {
           pasivoCapitalCell = 'Total Pasivos';
           pasivoCapitalAmount = '$' + totalPasivos.toLocaleString('es-MX', { minimumFractionDigits: 2 });
+          pasivoIndex++;
           row.className = 'total-row';
-        } else if (i === balance.pasivos.length + 2 && balance.capital.length > 0) {
-          pasivoCapitalCell = 'CAPITAL';
-          pasivoCapitalAmount = '';
-          row.className = 'section-title';
-        } else if (capitalIndex < balance.capital.length) {
-          const capital = balance.capital[capitalIndex];
-          pasivoCapitalCell = capital.nombre;
-          pasivoCapitalAmount = '$' + capital.saldo.toLocaleString('es-MX', { minimumFractionDigits: 2 });
+        } else if (capitalIndex < totalCapitalItems) {
+          const capital = capitalData[capitalIndex];
+          
+          if (currentCapitalSection !== capital.seccion) {
+            pasivoCapitalCell = capital.seccion;
+            pasivoCapitalAmount = '';
+            currentCapitalSection = capital.seccion;
+            row.className = 'section-title';
+          } else {
+            pasivoCapitalCell = capital.nombre;
+            pasivoCapitalAmount = '$' + capital.saldo.toLocaleString('es-MX', { minimumFractionDigits: 2 });
+            capitalIndex++;
+          }
+        } else if (capitalIndex === totalCapitalItems && totalCapital > 0) {
+          pasivoCapitalCell = 'Total Capital';
+          pasivoCapitalAmount = '$' + totalCapital.toLocaleString('es-MX', { minimumFractionDigits: 2 });
           capitalIndex++;
+          row.className = 'total-row';
         } else if (i === maxRows - 1) {
           pasivoCapitalCell = 'TOTAL PASIVO + CAPITAL';
           pasivoCapitalAmount = '$' + totalPasivoCapital.toLocaleString('es-MX', { minimumFractionDigits: 2 });
@@ -476,88 +678,77 @@
         }
 
         // Aplicar clases CSS
-        const activoCellClass = (activoCell.startsWith('TOTAL') || activoCell === 'ACTIVOS') ? '' : 'account-name';
-        const pasivoCellClass = (pasivoCapitalCell.startsWith('TOTAL') || pasivoCapitalCell === 'PASIVOS' || pasivoCapitalCell === 'CAPITAL') ? '' : 'account-name';
+        const activoCellClass = (activoCell.includes('TOTAL') || activoCell.includes('ACTIVO')) ? '' : 'account-name';
+        const pasivoCellClass = (pasivoCapitalCell.includes('TOTAL') || pasivoCapitalCell.includes('PASIVO') || pasivoCapitalCell.includes('CAPITAL')) ? '' : 'account-name';
 
-        row.innerHTML = '<td class="' + activoCellClass + '">' + activoCell + '</td>' +
-                       '<td class="amount">' + activoAmount + '</td>' +
-                       '<td class="' + pasivoCellClass + '">' + pasivoCapitalCell + '</td>' +
-                       '<td class="amount">' + pasivoCapitalAmount + '</td>';
+        row.innerHTML = `<td class="${activoCellClass}">${activoCell}</td>` +
+                       `<td class="amount">${activoAmount}</td>` +
+                       `<td class="${pasivoCellClass}">${pasivoCapitalCell}</td>` +
+                       `<td class="amount">${pasivoCapitalAmount}</td>`;
 
         tbody.appendChild(row);
       }
 
       // Mostrar el balance
       document.getElementById('balanceContent').style.display = 'block';
+      document.getElementById('noDataMessage').style.display = 'none';
     }
 
     // Generar balance general
-    function generarBalance() {
+    async function generarBalance() {
       try {
-        const fechaCorte = document.getElementById('fechaCorte').value;
-
-        if (!fechaCorte) {
-          alert('Por favor seleccione una fecha de corte');
-          return;
-        }
-
+        const btn = document.getElementById('generateBtn');
+        const originalText = btn.textContent;
+        
         // Mostrar loading
-        document.getElementById('generateBtn').textContent = 'Generando...';
-        document.getElementById('generateBtn').disabled = true;
+        btn.innerHTML = '<span class="loading-spinner"></span>Generando...';
+        btn.disabled = true;
 
-        // Filtrar movimientos hasta la fecha de corte
-        const movimientosFiltrados = movimientos.filter(function(mov) {
-          return mov.fecha <= fechaCorte;
-        });
-
-        if (movimientosFiltrados.length === 0) {
-          alert('No hay movimientos registrados hasta la fecha seleccionada');
+        const balance = await getBalanceGeneral();
+        
+        if (!balance || (!balance.activo?.total && !balance.pasivo?.total && !balance.capital?.total)) {
+          document.getElementById('noDataMessage').style.display = 'block';
+          document.getElementById('balanceContent').style.display = 'none';
+          document.getElementById('summaryCards').style.display = 'none';
+          showMessage('No hay movimientos registrados para la fecha seleccionada', 'warning');
           return;
         }
 
-        // Calcular saldos por cuenta
-        const saldosCuentas = calcularSaldosPorCuenta(movimientosFiltrados);
+        renderBalance(balance);
+        showMessage('Balance generado correctamente', 'success');
         
-        // Organizar balance
-        const balance = organizarBalance(saldosCuentas);
-        
-        // Renderizar balance
-        renderBalance(fechaCorte, balance);
-        
-        // Ocultar mensaje de no datos
-        document.getElementById('noDataMessage').style.display = 'none';
-
       } catch (error) {
         console.error('Error generando balance:', error);
-        alert('Error generando el balance');
+        showMessage('Error generando el balance: ' + error.message, 'danger');
+        document.getElementById('noDataMessage').style.display = 'block';
+        document.getElementById('balanceContent').style.display = 'none';
+        document.getElementById('summaryCards').style.display = 'none';
       } finally {
-        document.getElementById('generateBtn').textContent = 'Generar Balance';
-        document.getElementById('generateBtn').disabled = false;
+        const btn = document.getElementById('generateBtn');
+        btn.textContent = 'Generar Balance';
+        btn.disabled = false;
       }
     }
 
-    // Verificar auth al cargar
-    if (!checkAuth()) {
-      // Redirigir si no está autenticado
-    } else {
-      // Inicializar página
-      document.addEventListener('DOMContentLoaded', function() {
-        // Establecer fecha actual por defecto
-        const today = new Date();
-        document.getElementById('fechaCorte').value = today.toISOString().split('T')[0];
-        
-        // Event listener
-        document.getElementById('generateBtn').addEventListener('click', generarBalance);
-        
-        // Cargar movimientos
-        movimientos = JSON.parse(localStorage.getItem('movimientos')) || [];
-        
-        // Si no hay movimientos, mostrar mensaje
-        if (movimientos.length === 0) {
-          document.getElementById('noDataMessage').style.display = 'block';
-        }
-      });
-    }
+    // Inicialización
+    document.addEventListener('DOMContentLoaded', async function() {
+      if (!checkAuth()) return;
+
+      // Establecer fecha actual por defecto
+      const today = new Date();
+      document.getElementById('fechaCorte').value = today.toISOString().split('T')[0];
+      
+      // Event listeners
+      document.getElementById('generateBtn').addEventListener('click', generarBalance);
+      
+      // Cargar datos iniciales
+      await loadEmpresas();
+      
+      // Auto-generar si hay empresas
+      if (empresas.length > 0) {
+        setTimeout(() => generarBalance(), 1000);
+      }
+    });
   </script>
 </body>
 </html>
